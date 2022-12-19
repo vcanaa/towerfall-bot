@@ -156,7 +156,15 @@ class QuestBot:
     y = self.me.e['pos']['y']
     for e in self.entities:
       e.p.x -= x
+      if (e.p.x < -160):
+        e.p.x += 320
+      if (e.p.x >= 160):
+        e.p.x -= 320
       e.p.y -= y
+      if (e.p.y < -120):
+        e.p.y += 240
+      if (e.p.y >= 120):
+        e.p.y -= 240
 
 
   def handleUpdate(self, state):
@@ -166,7 +174,7 @@ class QuestBot:
       self.getPlayer(self.entities)
 
       # self.cgrid = np.roll(self.grid, int(self.me.p.x / 10), axis=0)
-      # self.adjustEntitiesPos()
+      self.adjustEntitiesPos()
 
       if self.me == None:
         reply()

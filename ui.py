@@ -37,28 +37,18 @@ class BotUI(Thread):
       index = int(w.curselection()[0])
       e = self.entities[index]
       self.msg_info.configure(text=json.dumps(e.e, indent=2))
-      # self.canvas_screen.coords(self.rect_selection_id,
-      #   e.p.x * 2 - e.s.x + 320,
-      #   (240 - e.p.y) * 2 - e.s.y - 240,
-      #   e.p.x * 2 + e.s.x + 320,
-      #   (240 - e.p.y) * 2 + e.s.y - 240)
       self.canvas_screen.coords(self.rect_selection_id,
-        e.p.x * 2 - e.s.x,
-        (240 - e.p.y) * 2 - e.s.y,
-        e.p.x * 2 + e.s.x,
-        (240 - e.p.y) * 2 + e.s.y)
+        e.p.x * 2 - e.s.x + 320,
+        (240 - e.p.y) * 2 - e.s.y - 240,
+        e.p.x * 2 + e.s.x + 320,
+        (240 - e.p.y) * 2 + e.s.y - 240)
       width = max(15, e.s.x*2)
       height = max(15, e.s.y*2)
-      # self.canvas_screen.coords(self.circle_selection_id,
-      #   e.p.x * 2 - width + 320,
-      #   (240 - e.p.y) * 2 - height - 240,
-      #   e.p.x * 2 + width + 320,
-      #   (240 - e.p.y) * 2 + height - 240)
       self.canvas_screen.coords(self.circle_selection_id,
-        e.p.x * 2 - width,
-        (240 - e.p.y) * 2 - height,
-        e.p.x * 2 + width,
-        (240 - e.p.y) * 2 + height)
+        e.p.x * 2 - width + 320,
+        (240 - e.p.y) * 2 - height - 240,
+        e.p.x * 2 + width + 320,
+        (240 - e.p.y) * 2 + height - 240)
 
     self.lst_entities.bind('<<ListboxSelect>>', onselect)
 
@@ -85,8 +75,8 @@ class BotUI(Thread):
       log(str(screen_data.shape))
 
       a = screen_data.reshape(240, 320, 4)
-      # a = np.roll(a, int(160 - self.bot.me.e['pos']['x']), axis=1)
-      # a = np.roll(a, int(120 + self.bot.me.e['pos']['y']), axis=0)
+      a = np.roll(a, int(160 - self.bot.me.e['pos']['x']), axis=1)
+      a = np.roll(a, int(120 + self.bot.me.e['pos']['y']), axis=0)
       self.img = ImageTk.PhotoImage(image=Image.fromarray(a, mode='RGBA').resize((320*2, 240*2), Image.Resampling.NEAREST))
       self.canvas_screen.itemconfig(self.image_screen, image = self.img)
       self.btn_pause.config(text="Resume")

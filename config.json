@@ -1,0 +1,20 @@
+{
+  // "mode": "versus",
+  "mode": "quest",
+  "level": 8,
+  "skipWaves": 0,
+  "rounds": 1,
+  // "fastrun": true,
+  "bots": [
+    {
+      "execute": "C:/Users/vcanaa/miniconda3/envs/tf-gpu/python.exe aimod/run_quest_bot.py",
+      "team": "red",
+      "archer": "blue"
+    },
+    // {
+    //   "execute": "C:/Users/vcanaa/miniconda3/envs/tf-gpu/python.exe aimod/CoopBot.py",
+    //   "team": "blue",
+    //   "archer": "green"
+    // }
+  ]
+}

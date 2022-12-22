@@ -11,7 +11,7 @@ from threading import Lock
 
 from math import cos, sin
 
-from common import reply, hasArrows, chance, distance, distance2, Controls, Entity, Vec2, to_entities, is_arrow_pickup, log, press, diff, vec2_from_dict, is_stuck_arrow
+from common import reply, hasArrows, chance, distance, distance2, Controls, Entity, Vec2, to_entities, is_arrow_pickup, log, press, diff, vec2_from_dict, is_stuck_arrow, bounded
 
 from typing import Any, List, Optional, Tuple
 
@@ -20,7 +20,6 @@ class QuestBot:
     self.cgrid: ArrayLike # Centered grid
     self.stateInit: Any
     self.stateUpdate: Any
-    self.me: Optional[Entity] = None
     self.control: Controls = Controls()
     self.entities: List[Entity]
     self.widget_update_cd: int = 0
@@ -54,7 +53,7 @@ class QuestBot:
 
   def handleScenario(self, state: dict):
     log("handleScenario")
-    self.grid = np.array(state['grid'])
+    self.fixed_grid = np.array(state['grid'])
     reply()
 
 
@@ -62,7 +61,7 @@ class QuestBot:
     for e in entities:
       if e.type == 'archer':
         if e['playerIndex'] == self.stateInit['index']:
-          self.me = e
+          self.me: Entity = e
           return e
 
 
@@ -124,7 +123,7 @@ class QuestBot:
     dp.set_length(5)
     p = p1.copy()
     for i in range(int(dp.length())):
-      if self.grid[int(p.x/10)][int(p.y/10)] == 1:
+      if self.fixed_grid[int(p.x/10)][int(p.y/10)] == 1:
         return False
       p.add(dp)
     return True
@@ -174,8 +173,8 @@ class QuestBot:
 
 
   def adjustEntitiesPos(self):
-    x = self.me.e['pos']['x']
-    y = self.me.e['pos']['y']
+    x = self.me['pos']['x']
+    y = self.me['pos']['y']
     for e in self.entities:
       e.p.x -= x
       if (e.p.x < -160):
@@ -192,10 +191,10 @@ class QuestBot:
   def fillGrid(self, e: Entity):
     topLeft = e.topLeft()
     botRight = e.bottomRight()
-    self.grid[int(topLeft.x/10)][int(topLeft.y/10)] = 1
-    self.grid[int(botRight.x/10)][int(topLeft.y/10)] = 1
-    self.grid[int(topLeft.x/10)][int(botRight.y/10)] = 1
-    self.grid[int(botRight.x/10)][int(botRight.y/10)] = 1
+    self.fixed_grid[bounded(int(topLeft.x/10), 0, 32)][bounded(int(topLeft.y/10), 0, 24)] = 1
+    self.fixed_grid[bounded(int(botRight.x/10 - 0.001), 0, 32)][bounded(int(topLeft.y/10), 0, 24)] = 1
+    self.fixed_grid[bounded(int(topLeft.x/10), 0, 32)][bounded(int(botRight.y/10 - 0.001), 0, 24)] = 1
+    self.fixed_grid[bounded(int(botRight.x/10 - 0.001), 0, 32)][bounded(int(botRight.y/10 - 0.001), 0, 24)] = 1
 
 
   def handleUpdate(self, state):
@@ -203,6 +202,7 @@ class QuestBot:
     try:
       self.shootcd -= 16
 
+      self.target = None
       self.entities: List[Entity] = to_entities(state['entities'])
       self.getPlayer(self.entities)
 
@@ -210,6 +210,8 @@ class QuestBot:
         if e.type != 'crackedWall':
           continue
         self.fillGrid(e)
+
+
 
       # self.cgrid = np.roll(self.grid, int(self.me.p.x / 10), axis=0)
       self.adjustEntitiesPos()

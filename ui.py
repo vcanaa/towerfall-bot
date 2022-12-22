@@ -93,7 +93,7 @@ class BotUI(Thread):
     self.img = ImageTk.PhotoImage(image=Image.fromarray(a, mode='RGBA').resize((320*2, 240*2), Image.Resampling.NEAREST))
     self.canvas_screen.itemconfig(self.image_screen, image = self.img)
 
-    self.updateGrid()
+    # self.updateGrid()
 
     self.btn_pause.config(text="Resume")
 
@@ -103,15 +103,16 @@ class BotUI(Thread):
 
 
   def updateGrid(self):
-    if not self.grid_rects:
+    if not hasattr(self, 'grid_rects'):
       self.grid_rects: List[int] = []
 
     for r in self.grid_rects:
-      self.canvas_screen.delete()
+      self.canvas_screen.delete(r)
 
     for i in range(32):
       for j in range(24):
-        self.grid_rects.append(self.canvas_screen.create_rectangle(i*10, j*10,i+10,j+10, fill='red'))
+        if self.bot.fixed_grid[i][j] == 1:
+          self.grid_rects.append(self.canvas_screen.create_rectangle(i*20, (24-j)*20,(i+1)*20,(24 - j -1)*20, fill='red'))
 
 
   def update(self):

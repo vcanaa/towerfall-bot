@@ -46,3 +46,10 @@ def distance2(p1: Vec2, p2: Vec2) -> float:
 def diff(p1: Vec2, p2: Vec2) -> Vec2:
   return Vec2(p1.x - p2.x, p1.y - p2.y)
 
+
+def bounded(v, left, right):
+  if v < left:
+    return v + right - left
+  if v >= right:
+    return v - (right - left)
+  return v

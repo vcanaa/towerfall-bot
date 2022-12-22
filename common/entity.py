@@ -1,27 +1,64 @@
+from __future__ import annotations
+
 import sys
 
 from typing import Any, List
+from math import sqrt
+
 
 class Entity:
   def __init__(self, e: dict):
-    self.p: Vec2 = Vec2(e['pos'])
-    self.v: Vec2 = Vec2(e['vel'])
-    self.s: Vec2 = Vec2(e['size'])
+    self.p: Vec2 = vec2_from_dict(e['pos'])
+    self.v: Vec2 = vec2_from_dict(e['vel'])
+    self.s: Vec2 = vec2_from_dict(e['size'])
     self.isEnemy: bool = e['isEnemy']
     self.type: str = e['type']
     self.e: Any = e
+
 
   def __getitem__(self, key):
     return self.e[key]
 
 
+  def topLeft(self) -> Vec2:
+    return Vec2(self.p.x - self.s.x / 2, self.p.y - self.s.y / 2)
+
+
+  def bottomRight(self) -> Vec2:
+    return Vec2(self.p.x + self.s.x / 2, self.p.y + self.s.y / 2)
+
+
 class Vec2:
-  def __init__(self, p: dict):
-    try:
-      self.x: float = p['x']
-      self.y: float = p['y']
-    except KeyError:
-      sys.stderr.write(str(p))
+  def __init__(self, x, y):
+    self.x = x
+    self.y = y
+
+
+  def set_length(self, l: float):
+    d = self.length()
+    self.x *= l/d
+    self.y *= l/d
+
+
+  def length(self):
+    return sqrt(self.x**2 + self.y**2)
+
+
+  def copy(self):
+    return Vec2(self.x, self.y)
+
+
+  def add(self, v: Vec2):
+    self.x += v.x
+    self.y += v.y
+
+
+def vec2_from_dict(p: dict) -> Vec2:
+  try:
+    return Vec2(p['x'], p['y'])
+  except KeyError:
+    sys.stderr.write(str(p))
+    raise
 
 
 def to_entities(entities: List[dict]) -> List[Entity]:
@@ -34,3 +71,7 @@ def to_entities(entities: List[dict]) -> List[Entity]:
 
 def is_arrow_pickup(e: Entity) -> bool:
   return e.type == 'item' and e['itemType'].startswith('arrow')
+
+
+def is_stuck_arrow(e: Entity) -> bool:
+  return e.type == 'arrow' and e['state'] == 'stuck'

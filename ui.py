@@ -7,13 +7,16 @@ from threading import Thread
 
 from PIL import Image, ImageTk
 
-from common import log
+from common import log, Entity
+
+from typing import Tuple, List
 
 class BotUI(Thread):
   def __init__(self, bot: QuestBot):
     self.bot: QuestBot = bot
     self.is_paused = False
     Thread.__init__(self)
+
 
   def run(self):
     self.root = tk.Tk()
@@ -32,10 +35,12 @@ class BotUI(Thread):
     self.rect_selection_id = self.canvas_screen.create_rectangle(0,0,0,0, outline='magenta')
     self.circle_selection_id = self.canvas_screen.create_oval(0,0,0,0, outline='green2')
 
+
     def onselect(evt):
       w: tk.Listbox = evt.widget
       index = int(w.curselection()[0])
-      e = self.entities[index]
+
+      e = self.entities[index][1]
       self.msg_info.configure(text=json.dumps(e.e, indent=2))
       self.canvas_screen.coords(self.rect_selection_id,
         e.p.x * 2 - e.s.x + 320,
@@ -64,26 +69,49 @@ class BotUI(Thread):
 
   def pause_handle(self):
     if self.is_paused:
-      self.is_paused = False
-      update_th = Thread(target = self.update)
-      update_th.daemon = True
-      update_th.start()
-      self.btn_pause.config(text="Pause")
+      self.unpause()
     else:
-      self.is_paused = True
-      screen_data = self.bot.get_game_screen()
-      log(str(screen_data.shape))
+      self.pause()
 
-      a = screen_data.reshape(240, 320, 4)
-      a = np.roll(a, int(160 - self.bot.me.e['pos']['x']), axis=1)
-      a = np.roll(a, int(120 + self.bot.me.e['pos']['y']), axis=0)
-      self.img = ImageTk.PhotoImage(image=Image.fromarray(a, mode='RGBA').resize((320*2, 240*2), Image.Resampling.NEAREST))
-      self.canvas_screen.itemconfig(self.image_screen, image = self.img)
-      self.btn_pause.config(text="Resume")
 
-      self.entities = self.bot.entities
-      self.lst_entities.delete(0, tk.END)
-      self.lst_entities.insert(tk.END, *[e.type for e in self.entities])
+  def unpause(self):
+    self.is_paused = False
+    update_th = Thread(target = self.update)
+    update_th.daemon = True
+    update_th.start()
+    self.btn_pause.config(text="Pause")
+
+
+  def pause(self):
+    self.is_paused = True
+    screen_data = self.bot.get_game_screen()
+    log(str(screen_data.shape))
+
+    a = screen_data.reshape(240, 320, 4)
+    a = np.roll(a, int(160 - self.bot.me.e['pos']['x']), axis=1)
+    a = np.roll(a, int(120 + self.bot.me.e['pos']['y']), axis=0)
+    self.img = ImageTk.PhotoImage(image=Image.fromarray(a, mode='RGBA').resize((320*2, 240*2), Image.Resampling.NEAREST))
+    self.canvas_screen.itemconfig(self.image_screen, image = self.img)
+
+    self.updateGrid()
+
+    self.btn_pause.config(text="Resume")
+
+    self.entities: List[Tuple[str, Entity]] = self.bot.get_entities()
+    self.lst_entities.delete(0, tk.END)
+    self.lst_entities.insert(tk.END, *[e[0] for e in self.entities])
+
+
+  def updateGrid(self):
+    if not self.grid_rects:
+      self.grid_rects: List[int] = []
+
+    for r in self.grid_rects:
+      self.canvas_screen.delete()
+
+    for i in range(32):
+      for j in range(24):
+        self.grid_rects.append(self.canvas_screen.create_rectangle(i*10, j*10,i+10,j+10, fill='red'))
 
 
   def update(self):

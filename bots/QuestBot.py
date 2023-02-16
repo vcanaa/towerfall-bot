@@ -84,6 +84,7 @@ class QuestBot:
 
   def fightWithArrows(self, enemy: Entity, pathToEnemy: Path):
     self.target = enemy
+    self.pathToTarget = pathToEnemy
     dist = distance(self.me.p, enemy.p)
     # height = self.me.s.y
     # self.chase(enemy.p)
@@ -127,11 +128,13 @@ class QuestBot:
 
   def fightWithoutArrows(self, enemy: Entity, pathToEnemy: Path):
     self.target = enemy
+    self.pathToTarget = pathToEnemy
     enemy_dist: float = self.getDist(enemy.p)
     arrow, pathToArrow = self.getClosestStuckArrow()
 
     if arrow and pathToArrow:
       self.target = arrow
+      self.pathToTarget = pathToArrow
       self.chase(pathToArrow.checkpoint.pos)
       return
 
@@ -183,6 +186,7 @@ class QuestBot:
       self.shootcd -= 16
 
       self.target = None
+      self.pathToTarget = None
       self.entities: List[Entity] = to_entities(state['entities'])
       self.getPlayer(self.entities)
       # self.adjustEntitiesPos()
@@ -204,6 +208,7 @@ class QuestBot:
         arrow, pathToArrow = self.getClosestStuckArrow()
         if arrow and pathToArrow:
           self.target = arrow
+          self.pathToTarget = pathToArrow
           self.chase(pathToArrow.checkpoint.pos)
         reply()
         return
@@ -233,9 +238,9 @@ class QuestBot:
     self.shootcd = 600
 
 
-  def get_entities(self) -> List[Tuple[str, Entity]]:
+  def get_entities(self) -> List[Tuple[str, object]]:
     result = []
     if self.target:
-      result.append(('*target', self.target))
+      result.append(('*target', self.target, self.pathToTarget))
     result.extend([(e.type, e) for e in self.entities])
     return result

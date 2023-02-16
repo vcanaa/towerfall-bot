@@ -7,7 +7,7 @@ from threading import Thread
 
 from PIL import Image, ImageTk
 
-from common import log, Entity
+from common import log, Entity, Path
 
 from typing import Tuple, List
 
@@ -17,6 +17,51 @@ class BotUI(Thread):
     self.is_paused = False
     self.show_grid = False
     Thread.__init__(self)
+
+
+  def show_entity(self, e: Entity):
+    self.msg_info.configure(text=json.dumps(e.e, indent=2))
+    # self.canvas_screen.coords(self.rect_selection_id,
+    #   e.p.x * 2 - e.s.x + 320,
+    #   (240 - e.p.y) * 2 - e.s.y - 240,
+    #   e.p.x * 2 + e.s.x + 320,
+    #   (240 - e.p.y) * 2 + e.s.y - 240)
+    # width = max(15, e.s.x*2)
+    # height = max(15, e.s.y*2)
+    # self.canvas_screen.coords(self.circle_selection_id,
+    #   e.p.x * 2 - width + 320,
+    #   (240 - e.p.y) * 2 - height - 240,
+    #   e.p.x * 2 + width + 320,
+    #   (240 - e.p.y) * 2 + height - 240)
+    self.canvas_screen.coords(self.rect_selection_id,
+      e.p.x * 2 - e.s.x,
+      (240 - e.p.y) * 2 - e.s.y,
+      e.p.x * 2 + e.s.x,
+      (240 - e.p.y) * 2 + e.s.y)
+    width = max(15, e.s.x*2)
+    height = max(15, e.s.y*2)
+    self.canvas_screen.coords(self.circle_selection_id,
+      e.p.x * 2 - width,
+      (240 - e.p.y) * 2 - height,
+      e.p.x * 2 + width,
+      (240 - e.p.y) * 2 + height)
+
+
+  def clear_path(self):
+    if not hasattr(self, 'path_rects'):
+      return
+
+    for rect_id in self.path_rects:
+      self.canvas_screen.delete(rect_id)
+
+
+  def show_path(self, path: Path):
+    if not hasattr(self, 'path_rects'):
+      self.path_rects: List[int] = []
+
+    i = path.checkpoint.i
+    j = path.checkpoint.j
+    self.path_rects.append(self.canvas_screen.create_rectangle(i*20, (24-j)*20,(i+1)*20,(24 - j -1)*20, fill='yellow', stipple="gray25"))
 
 
   def run(self):
@@ -43,32 +88,14 @@ class BotUI(Thread):
       w: tk.Listbox = evt.widget
       index = int(w.curselection()[0])
 
-      e = self.entities[index][1]
-      self.msg_info.configure(text=json.dumps(e.e, indent=2))
-      # self.canvas_screen.coords(self.rect_selection_id,
-      #   e.p.x * 2 - e.s.x + 320,
-      #   (240 - e.p.y) * 2 - e.s.y - 240,
-      #   e.p.x * 2 + e.s.x + 320,
-      #   (240 - e.p.y) * 2 + e.s.y - 240)
-      # width = max(15, e.s.x*2)
-      # height = max(15, e.s.y*2)
-      # self.canvas_screen.coords(self.circle_selection_id,
-      #   e.p.x * 2 - width + 320,
-      #   (240 - e.p.y) * 2 - height - 240,
-      #   e.p.x * 2 + width + 320,
-      #   (240 - e.p.y) * 2 + height - 240)
-      self.canvas_screen.coords(self.rect_selection_id,
-        e.p.x * 2 - e.s.x,
-        (240 - e.p.y) * 2 - e.s.y,
-        e.p.x * 2 + e.s.x,
-        (240 - e.p.y) * 2 + e.s.y)
-      width = max(15, e.s.x*2)
-      height = max(15, e.s.y*2)
-      self.canvas_screen.coords(self.circle_selection_id,
-        e.p.x * 2 - width,
-        (240 - e.p.y) * 2 - height,
-        e.p.x * 2 + width,
-        (240 - e.p.y) * 2 + height)
+      self.clear_path()
+      for element in self.elements[index][1:]:
+        if isinstance(element, Entity):
+          self.show_entity(element)
+        elif isinstance(element, Path):
+          self.show_path(element)
+        else:
+          raise Exception('The type \'{}\' has no show function'.format(type(element)))
 
     self.lst_entities.bind('<<ListboxSelect>>', onselect)
 
@@ -128,9 +155,9 @@ class BotUI(Thread):
 
     self.btn_pause.config(text="Resume")
 
-    self.entities: List[Tuple[str, Entity]] = self.bot.get_entities()
+    self.elements: List[Tuple[str, object]] = self.bot.get_entities()
     self.lst_entities.delete(0, tk.END)
-    self.lst_entities.insert(tk.END, *[e[0] for e in self.entities])
+    self.lst_entities.insert(tk.END, *[e[0] for e in self.elements])
 
 
   def updateGrid(self):

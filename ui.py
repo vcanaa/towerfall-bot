@@ -15,6 +15,7 @@ class BotUI(Thread):
   def __init__(self, bot: QuestBot):
     self.bot: QuestBot = bot
     self.is_paused = False
+    self.show_grid = False
     Thread.__init__(self)
 
 
@@ -29,12 +30,14 @@ class BotUI(Thread):
     self.btn_pause = tk.Button(self.root, text="Pause", command = self.pause_handle)
     self.btn_pause.pack(side=tk.TOP)
 
+    self.btn_show_grid = tk.Button(self.root, text="Show Grid", command = self.grid_handle)
+    self.btn_show_grid.pack(side=tk.TOP)
+
     self.lst_entities = tk.Listbox(self.root, selectmode=tk.SINGLE)
     self.lst_entities.pack(side=tk.LEFT, anchor=tk.NW)
 
     self.rect_selection_id = self.canvas_screen.create_rectangle(0,0,0,0, outline='magenta')
     self.circle_selection_id = self.canvas_screen.create_oval(0,0,0,0, outline='green2')
-
 
     def onselect(evt):
       w: tk.Listbox = evt.widget
@@ -42,18 +45,30 @@ class BotUI(Thread):
 
       e = self.entities[index][1]
       self.msg_info.configure(text=json.dumps(e.e, indent=2))
+      # self.canvas_screen.coords(self.rect_selection_id,
+      #   e.p.x * 2 - e.s.x + 320,
+      #   (240 - e.p.y) * 2 - e.s.y - 240,
+      #   e.p.x * 2 + e.s.x + 320,
+      #   (240 - e.p.y) * 2 + e.s.y - 240)
+      # width = max(15, e.s.x*2)
+      # height = max(15, e.s.y*2)
+      # self.canvas_screen.coords(self.circle_selection_id,
+      #   e.p.x * 2 - width + 320,
+      #   (240 - e.p.y) * 2 - height - 240,
+      #   e.p.x * 2 + width + 320,
+      #   (240 - e.p.y) * 2 + height - 240)
       self.canvas_screen.coords(self.rect_selection_id,
-        e.p.x * 2 - e.s.x + 320,
-        (240 - e.p.y) * 2 - e.s.y - 240,
-        e.p.x * 2 + e.s.x + 320,
-        (240 - e.p.y) * 2 + e.s.y - 240)
+        e.p.x * 2 - e.s.x,
+        (240 - e.p.y) * 2 - e.s.y,
+        e.p.x * 2 + e.s.x,
+        (240 - e.p.y) * 2 + e.s.y)
       width = max(15, e.s.x*2)
       height = max(15, e.s.y*2)
       self.canvas_screen.coords(self.circle_selection_id,
-        e.p.x * 2 - width + 320,
-        (240 - e.p.y) * 2 - height - 240,
-        e.p.x * 2 + width + 320,
-        (240 - e.p.y) * 2 + height - 240)
+        e.p.x * 2 - width,
+        (240 - e.p.y) * 2 - height,
+        e.p.x * 2 + width,
+        (240 - e.p.y) * 2 + height)
 
     self.lst_entities.bind('<<ListboxSelect>>', onselect)
 
@@ -65,6 +80,24 @@ class BotUI(Thread):
     update_th.start()
 
     self.root.mainloop()
+
+
+  def grid_handle(self):
+    if self.show_grid:
+      self.hide_grid()
+    else:
+      self.show_grid = True
+      self.updateGrid()
+      self.btn_show_grid.config(text="Hide Grid")
+
+
+  def hide_grid(self):
+    self.show_grid = False
+    self.btn_show_grid.config(text="Show Grid")
+    if not hasattr(self, 'grid_rects'):
+      return
+    for r in self.grid_rects:
+      self.canvas_screen.delete(r)
 
 
   def pause_handle(self):
@@ -88,12 +121,10 @@ class BotUI(Thread):
     log(str(screen_data.shape))
 
     a = screen_data.reshape(240, 320, 4)
-    a = np.roll(a, int(160 - self.bot.me.e['pos']['x']), axis=1)
-    a = np.roll(a, int(120 + self.bot.me.e['pos']['y']), axis=0)
+    # a = np.roll(a, int(160 - self.bot.me.e['pos']['x']), axis=1)
+    # a = np.roll(a, int(120 + self.bot.me.e['pos']['y']), axis=0)
     self.img = ImageTk.PhotoImage(image=Image.fromarray(a, mode='RGBA').resize((320*2, 240*2), Image.Resampling.NEAREST))
     self.canvas_screen.itemconfig(self.image_screen, image = self.img)
-
-    # self.updateGrid()
 
     self.btn_pause.config(text="Resume")
 
@@ -111,8 +142,8 @@ class BotUI(Thread):
 
     for i in range(32):
       for j in range(24):
-        if self.bot.fixed_grid[i][j] == 1:
-          self.grid_rects.append(self.canvas_screen.create_rectangle(i*20, (24-j)*20,(i+1)*20,(24 - j -1)*20, fill='red'))
+        if self.bot.grid[i][j] == 1:
+          self.grid_rects.append(self.canvas_screen.create_rectangle(i*20, (24-j)*20,(i+1)*20,(24 - j -1)*20, fill='red', stipple="gray25"))
 
 
   def update(self):
@@ -120,3 +151,5 @@ class BotUI(Thread):
       if self.is_paused:
         return
       self.bot.update()
+      if self.bot.pause:
+        self.pause()

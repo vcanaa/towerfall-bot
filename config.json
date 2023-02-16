@@ -3,11 +3,11 @@
   "mode": "quest",
   "level": 2,
   "skipWaves": 0,
-  "rounds": 1,
+  // "rounds": 1,
   // "fastrun": true,
   "bots": [
     {
-      "execute": "C:/Users/vcanaa/miniconda3/envs/tf-gpu/python.exe aimod/run_quest_bot.py",
+      "execute": "C:/Users/vcanaa/miniconda3/envs/torch/python.exe aimod/run_quest_bot.py",
       "team": "red",
       "archer": "blue"
     },

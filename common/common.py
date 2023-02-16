@@ -3,9 +3,10 @@ import random
 
 from math import sqrt
 
-from .entity import Vec2, Entity
+from .entity import Vec2, Entity, vec2_from_dict
 
-from typing import Optional
+from typing import Optional, Tuple, List
+
 
 
 def reply(msg: Optional[str] = None):
@@ -53,3 +54,19 @@ def bounded(v, left, right):
   if v >= right:
     return v - (right - left)
   return v
+
+
+def gridPos(p: Vec2) -> Tuple[int, int]:
+  return (int(p.x/10) % 32, int(p.y/10) % 24)
+
+
+def isCleanPath(p1: Vec2, p2: Vec2, grid) -> bool:
+  dp = diff(p2, p1)
+  dp.set_length(5)
+  p = p1.copy()
+  for i in range(int(dp.length())):
+    pgrid = gridPos(p)
+    if grid[pgrid[0]][pgrid[1]] == 1:
+      return False
+    p.add(dp)
+  return True

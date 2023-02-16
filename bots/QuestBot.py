@@ -11,7 +11,7 @@ from threading import Lock
 
 from math import cos, sin
 
-from common import reply, hasArrows, chance, distance, distance2, Controls, Entity, Vec2, to_entities, is_arrow_pickup, log, press, diff, vec2_from_dict, is_stuck_arrow, bounded
+from common import *
 
 from typing import Any, List, Optional, Tuple
 
@@ -26,6 +26,7 @@ class QuestBot:
     self.update_lock = Lock()
     self.shm = shared_memory.SharedMemory(name='towerfallScreen')
     self.shootcd: float = 0
+    self.pause = False
 
   def run(self):
     while True:
@@ -65,41 +66,23 @@ class QuestBot:
           return e
 
 
-  def getClosestEnemy(self, entities: List[Entity]):
-    closest: Optional[Entity] = None
-    minDist = 99999999
-    for e in entities:
-      if not e.isEnemy:
-        continue
-      if not self.isCleanPath(vec2_from_dict(self.me['pos']), vec2_from_dict(e['pos'])):
-        continue
-      dist = distance2(self.me.p, e.p)
-      if (dist < minDist):
-        closest = e
-        minDist = dist
-    return closest
+  def getClosestEnemy(self, entities: List[Entity]) -> Tuple[Optional[Entity], Optional[Path]]:
+    enemies = [e for e in entities if e['isEnemy']]
+    pathGrid = PathGrid()
+    return pathGrid.getClosestEntity(vec2_from_dict(self.me['pos']), enemies, self.grid)
 
 
-  def getClosestStuckArrow(self) -> Optional[Entity]:
-    closest: Optional[Entity] = None
-    minDist = 99999999
-    for e in self.entities:
-      if not is_stuck_arrow(e):
-        continue
-      if not self.isCleanPath(vec2_from_dict(self.me['pos']), vec2_from_dict(e['pos'])):
-        continue
-      dist = distance2(self.me.p, e.p)
-      if (dist < minDist):
-        closest = e
-        minDist = dist
-    return closest
+  def getClosestStuckArrow(self) -> Tuple[Optional[Entity], Optional[Path]]:
+    stuck_arrows = [e for e in self.entities if e.type == 'arrow' and is_stuck_arrow(e)]
+    pathGrid = PathGrid()
+    return pathGrid.getClosestEntity(vec2_from_dict(self.me['pos']), stuck_arrows, self.grid)
 
 
   def getDist(self, p: Vec2):
     return distance(self.me.p, p)
 
 
-  def fightWithArrows(self, enemy: Entity):
+  def fightWithArrows(self, enemy: Entity, pathToEnemy: Path):
     self.target = enemy
     dist = distance(self.me.p, enemy.p)
     # height = self.me.s.y
@@ -109,24 +92,13 @@ class QuestBot:
     # if dist < height * 5:
     if self.shootcd <= 0:
       # aim = vec2_from_dict(self.me.e['aimDirection'])
-      if self.isCleanPath(vec2_from_dict(self.me['pos']), vec2_from_dict(enemy['pos'])):
+      if isCleanPath(self.me.p, enemy.p, self.grid):
         self.shoot()
 
     else:
-      self.fightWithoutArrows(enemy)
+      self.fightWithoutArrows(enemy, pathToEnemy)
     # else:
     #   self.fightWithoutArrows(enemy)
-
-
-  def isCleanPath(self, p1: Vec2, p2: Vec2) -> bool:
-    dp = diff(p2, p1)
-    dp.set_length(5)
-    p = p1.copy()
-    for i in range(int(dp.length())):
-      if self.fixed_grid[int(p.x/10)][int(p.y/10)] == 1:
-        return False
-      p.add(dp)
-    return True
 
 
   def isAbove(self, ent: Entity, margin: float = 0):
@@ -153,14 +125,14 @@ class QuestBot:
         self.control.right()
 
 
-  def fightWithoutArrows(self, enemy: Entity):
+  def fightWithoutArrows(self, enemy: Entity, pathToEnemy: Path):
     self.target = enemy
     enemy_dist: float = self.getDist(enemy.p)
-    arrow: Optional[Entity] = self.getClosestStuckArrow()
+    arrow, pathToArrow = self.getClosestStuckArrow()
 
-    if arrow:
+    if arrow and pathToArrow:
       self.target = arrow
-      self.chase(arrow.p)
+      self.chase(pathToArrow.checkpoint.pos)
       return
 
     if enemy_dist > self.me.s.y * 4:
@@ -188,13 +160,21 @@ class QuestBot:
         e.p.y -= 240
 
 
-  def fillGrid(self, e: Entity):
+  def fillGrid(self, e: Entity, grid):
     topLeft = e.topLeft()
     botRight = e.bottomRight()
-    self.fixed_grid[bounded(int(topLeft.x/10), 0, 32)][bounded(int(topLeft.y/10), 0, 24)] = 1
-    self.fixed_grid[bounded(int(botRight.x/10 - 0.001), 0, 32)][bounded(int(topLeft.y/10), 0, 24)] = 1
-    self.fixed_grid[bounded(int(topLeft.x/10), 0, 32)][bounded(int(botRight.y/10 - 0.001), 0, 24)] = 1
-    self.fixed_grid[bounded(int(botRight.x/10 - 0.001), 0, 32)][bounded(int(botRight.y/10 - 0.001), 0, 24)] = 1
+    grid[bounded(int(topLeft.x/10), 0, 32)][bounded(int(topLeft.y/10), 0, 24)] = 1
+    grid[bounded(int(botRight.x/10 - 0.001), 0, 32)][bounded(int(topLeft.y/10), 0, 24)] = 1
+    grid[bounded(int(topLeft.x/10), 0, 32)][bounded(int(botRight.y/10 - 0.001), 0, 24)] = 1
+    grid[bounded(int(botRight.x/10 - 0.001), 0, 32)][bounded(int(botRight.y/10 - 0.001), 0, 24)] = 1
+
+
+  def updateGrid(self):
+    self.grid = self.fixed_grid.copy()
+    for e in self.entities:
+      if e.type != 'crackedWall':
+        continue
+      self.fillGrid(e, self.grid)
 
 
   def handleUpdate(self, state):
@@ -205,16 +185,9 @@ class QuestBot:
       self.target = None
       self.entities: List[Entity] = to_entities(state['entities'])
       self.getPlayer(self.entities)
+      # self.adjustEntitiesPos()
 
-      for e in self.entities:
-        if e.type != 'crackedWall':
-          continue
-        self.fillGrid(e)
-
-
-
-      # self.cgrid = np.roll(self.grid, int(self.me.p.x / 10), axis=0)
-      self.adjustEntitiesPos()
+      self.updateGrid()
 
       if self.me == None:
         reply()
@@ -226,15 +199,19 @@ class QuestBot:
       if chance(20):
         self.control.jump()
 
-      enemy = self.getClosestEnemy(self.entities)
-      if not enemy:
+      enemy, pathToEnemy = self.getClosestEnemy(self.entities)
+      if not enemy or not pathToEnemy:
+        arrow, pathToArrow = self.getClosestStuckArrow()
+        if arrow and pathToArrow:
+          self.target = arrow
+          self.chase(pathToArrow.checkpoint.pos)
         reply()
         return
 
       if hasArrows(self.me):
-        self.fightWithArrows(enemy)
+        self.fightWithArrows(enemy, pathToEnemy)
       else:
-        self.fightWithoutArrows(enemy)
+        self.fightWithoutArrows(enemy, pathToEnemy)
 
       self.control.reply()
     finally:
@@ -251,8 +228,9 @@ class QuestBot:
   def shoot(self):
     if self.target and self.target.type == 'arrow':
       raise Exception('Shooting at arrows?')
+    # self.pause = True
     self.control.shoot()
-    self.shootcd = 1000
+    self.shootcd = 600
 
 
   def get_entities(self) -> List[Tuple[str, Entity]]:

@@ -11,6 +11,8 @@ from common import log, Entity, Path
 
 from typing import Tuple, List
 
+from .grid import Grid
+
 class BotUI(Thread):
   def __init__(self, bot: QuestBot):
     self.bot: QuestBot = bot
@@ -69,6 +71,8 @@ class BotUI(Thread):
 
     self.canvas_screen = tk.Canvas(self.root, bg='magenta', width=320*2 -2, height=240*2 - 2)
 
+    self.wall_grid: Grid = Grid(self.canvas_screen, (320*2, 240*2))
+
     self.image_screen = self.canvas_screen.create_image(0, 0, anchor="nw", image=None)
     self.canvas_screen.pack(side=tk.TOP)
 
@@ -110,21 +114,11 @@ class BotUI(Thread):
 
 
   def grid_handle(self):
-    if self.show_grid:
-      self.hide_grid()
-    else:
-      self.show_grid = True
-      self.updateGrid()
+    self.wall_grid.toggle()
+    if self.wall_grid.is_visible:
       self.btn_show_grid.config(text="Hide Grid")
-
-
-  def hide_grid(self):
-    self.show_grid = False
-    self.btn_show_grid.config(text="Show Grid")
-    if not hasattr(self, 'grid_rects'):
-      return
-    for r in self.grid_rects:
-      self.canvas_screen.delete(r)
+    else:
+      self.btn_show_grid.config(text="Show Grid")
 
 
   def pause_handle(self):
@@ -150,7 +144,8 @@ class BotUI(Thread):
     a = screen_data.reshape(240, 320, 4)
     # a = np.roll(a, int(160 - self.bot.me.e['pos']['x']), axis=1)
     # a = np.roll(a, int(120 + self.bot.me.e['pos']['y']), axis=0)
-    self.img = ImageTk.PhotoImage(image=Image.fromarray(a, mode='RGBA').resize((320*2, 240*2), Image.Resampling.NEAREST))
+    self.img = ImageTk.PhotoImage(
+        image=Image.fromarray(a, mode='RGBA').resize((320*2, 240*2), Image.Resampling.NEAREST))
     self.canvas_screen.itemconfig(self.image_screen, image = self.img)
 
     self.btn_pause.config(text="Resume")
@@ -158,19 +153,7 @@ class BotUI(Thread):
     self.elements: List[Tuple[str, object]] = self.bot.get_entities()
     self.lst_entities.delete(0, tk.END)
     self.lst_entities.insert(tk.END, *[e[0] for e in self.elements])
-
-
-  def updateGrid(self):
-    if not hasattr(self, 'grid_rects'):
-      self.grid_rects: List[int] = []
-
-    for r in self.grid_rects:
-      self.canvas_screen.delete(r)
-
-    for i in range(32):
-      for j in range(24):
-        if self.bot.grid[i][j] == 1:
-          self.grid_rects.append(self.canvas_screen.create_rectangle(i*20, (24-j)*20,(i+1)*20,(24 - j -1)*20, fill='red', stipple="gray25"))
+    self.wall_grid.update(self.bot.grid)
 
 
   def update(self):

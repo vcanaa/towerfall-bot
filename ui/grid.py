@@ -8,7 +8,7 @@ from common import log
 from typing import Tuple
 
 class Grid:
-  def __init__(self, canvas: tk.Canvas, size: Tuple[int, int]):
+  def __init__(self, size: Tuple[int, int], canvas: tk.Canvas, ):
     self.canvas = canvas
     self.grid_rects: List[int] = []
     self.is_visible = False

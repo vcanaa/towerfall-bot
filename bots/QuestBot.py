@@ -227,6 +227,7 @@ class QuestBot:
     self.update_lock.acquire()
     screen_data = np.frombuffer(self.shm.buf, dtype=np.uint8)
     self.update_lock.release()
+    screen_data = screen_data.reshape(240, 320, 4)
     return screen_data
 
 

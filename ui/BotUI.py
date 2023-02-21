@@ -5,13 +5,15 @@ import json
 from bots import QuestBot
 from threading import Thread
 
-from PIL import Image, ImageTk
-
 from common import log, Entity, Path
 
 from typing import Tuple, List
 
 from .grid import Grid
+from .ScreenViewer import ScreenViewer
+
+
+screen_size = (320*2, 240*2)
 
 class BotUI(Thread):
   def __init__(self, bot: QuestBot):
@@ -63,30 +65,37 @@ class BotUI(Thread):
 
     i = path.checkpoint.i
     j = path.checkpoint.j
-    self.path_rects.append(self.canvas_screen.create_rectangle(i*20, (24-j)*20,(i+1)*20,(24 - j -1)*20, fill='yellow', stipple="gray25"))
+    self.path_rects.append(self.canvas_screen.create_rectangle(
+        i*20, (24-j)*20,(i+1)*20,(24 - j -1)*20, fill='yellow', stipple="gray25"))
 
 
   def run(self):
     self.root = tk.Tk()
 
-    self.canvas_screen = tk.Canvas(self.root, bg='magenta', width=320*2 -2, height=240*2 - 2)
+    self.canvas_screen = tk.Canvas(self.root, bg='magenta',
+        width=screen_size[0] - 2,
+        height=screen_size[1] - 2)
 
-    self.wall_grid: Grid = Grid(self.canvas_screen, (320*2, 240*2))
+    self.wall_grid: Grid = Grid(screen_size, self.canvas_screen)
+    self.screen_viewer = ScreenViewer(2, self.canvas_screen, self.bot)
 
-    self.image_screen = self.canvas_screen.create_image(0, 0, anchor="nw", image=None)
     self.canvas_screen.pack(side=tk.TOP)
 
-    self.btn_pause = tk.Button(self.root, text="Pause", command = self.pause_handle)
+    self.btn_pause = tk.Button(self.root, text="Pause",
+        command = self.pause_handle)
     self.btn_pause.pack(side=tk.TOP)
 
-    self.btn_show_grid = tk.Button(self.root, text="Show Grid", command = self.grid_handle)
+    self.btn_show_grid = tk.Button(self.root, text="Show Grid",
+        command = self.grid_handle)
     self.btn_show_grid.pack(side=tk.TOP)
 
     self.lst_entities = tk.Listbox(self.root, selectmode=tk.SINGLE)
     self.lst_entities.pack(side=tk.LEFT, anchor=tk.NW)
 
-    self.rect_selection_id = self.canvas_screen.create_rectangle(0,0,0,0, outline='magenta')
-    self.circle_selection_id = self.canvas_screen.create_oval(0,0,0,0, outline='green2')
+    self.rect_selection_id = self.canvas_screen.create_rectangle(0,0,0,0,
+        outline='magenta')
+    self.circle_selection_id = self.canvas_screen.create_oval(0,0,0,0,
+        outline='green2')
 
     def onselect(evt):
       w: tk.Listbox = evt.widget
@@ -99,7 +108,8 @@ class BotUI(Thread):
         elif isinstance(element, Path):
           self.show_path(element)
         else:
-          raise Exception('The type \'{}\' has no show function'.format(type(element)))
+          raise Exception('The type \'{}\' has no show function'.format(
+              type(element)))
 
     self.lst_entities.bind('<<ListboxSelect>>', onselect)
 
@@ -138,15 +148,7 @@ class BotUI(Thread):
 
   def pause(self):
     self.is_paused = True
-    screen_data = self.bot.get_game_screen()
-    log(str(screen_data.shape))
-
-    a = screen_data.reshape(240, 320, 4)
-    # a = np.roll(a, int(160 - self.bot.me.e['pos']['x']), axis=1)
-    # a = np.roll(a, int(120 + self.bot.me.e['pos']['y']), axis=0)
-    self.img = ImageTk.PhotoImage(
-        image=Image.fromarray(a, mode='RGBA').resize((320*2, 240*2), Image.Resampling.NEAREST))
-    self.canvas_screen.itemconfig(self.image_screen, image = self.img)
+    self.screen_viewer.update()
 
     self.btn_pause.config(text="Resume")
 

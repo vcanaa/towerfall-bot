@@ -55,6 +55,7 @@ class QuestBot:
   def handleScenario(self, state: dict):
     log("handleScenario")
     self.fixed_grid = np.array(state['grid'])
+    self.create_static_wall_grid()
     reply()
 
 
@@ -163,13 +164,35 @@ class QuestBot:
         e.p.y -= 240
 
 
-  def fillGrid(self, e: Entity, grid):
+  def fillGrid(self, e: Entity, grid, shouldLog = False):
+    factor = 320 / grid.shape[0]
+    if 320 % grid.shape[0] != 0:
+      raise Exception('fillGrid requires factor to be integer: {}'.format(factor))
+    if 240 / grid.shape[1] != factor:
+      raise Exception('Invalid aspect rate for grid: {}'.format(grid.shape))
     topLeft = e.topLeft()
     botRight = e.bottomRight()
-    grid[bounded(int(topLeft.x/10), 0, 32)][bounded(int(topLeft.y/10), 0, 24)] = 1
-    grid[bounded(int(botRight.x/10 - 0.001), 0, 32)][bounded(int(topLeft.y/10), 0, 24)] = 1
-    grid[bounded(int(topLeft.x/10), 0, 32)][bounded(int(botRight.y/10 - 0.001), 0, 24)] = 1
-    grid[bounded(int(botRight.x/10 - 0.001), 0, 32)][bounded(int(botRight.y/10 - 0.001), 0, 24)] = 1
+    x1 = int(bounded(topLeft.x // factor, 0, grid.shape[0]))
+    x2 = int(bounded(botRight.x // factor, 0, grid.shape[0]))
+    y1 = int(bounded(topLeft.y // factor, 0, grid.shape[1]))
+    y2 = int(bounded(botRight.y // factor, 0, grid.shape[1]))
+    if shouldLog:
+      log("{} {} {} {}".format(x1,x2,y1,y2))
+    if x2 > x1:
+      if y2 > y1:
+        grid[x1:x2, y1:y2] = 1
+      else:
+        grid[x1:x2, y1:grid.shape[1]] = 1
+        grid[x1:x2, 0:y2] = 1
+    else:
+      if y2 > y1:
+        grid[x1:grid.shape[0], y1:y2] = 1
+        grid[0:x2, y1:y2] = 1
+      else:
+        grid[x1:grid.shape[0], y1:grid.shape[1]] = 1
+        grid[x1:grid.shape[0], 0:y2] = 1
+        grid[0:x2, 0:grid.shape[1]] = 1
+        grid[0:x2, 0:y2] = 1
 
 
   def updateGrid(self):
@@ -221,6 +244,33 @@ class QuestBot:
       self.control.reply()
     finally:
       self.update_lock.release()
+
+
+  def create_static_wall_grid(self):
+    self.wall_grid_factor = wgf = 4
+    self.static_wall_grid: NDArray = np.zeros((320 // wgf, 240 // wgf))
+    for i in range(32):
+      for j in range(24):
+        if self.fixed_grid[i][j] == 1:
+          self.static_wall_grid[
+            10*i // wgf:10*(i+1) // wgf,
+            10*j // wgf:10*(j+1) // wgf] = 1
+    return self.static_wall_grid
+
+
+  def create_RL_input(self):
+    a = self.static_wall_grid.copy()
+    for e in self.entities:
+      if e.type == 'crackedWall':
+        log('Fill cracked wall')
+        self.fillGrid(e, a, True)
+    return a
+    # a = np.roll(self.static_wall_grid, -int(self.me.p.x - 160) // self.wall_grid_factor, axis=0)
+    # a = np.roll(a, -int(self.me.p.y - 120) // self.wall_grid_factor, axis=1)
+    # n = 50
+    # return a[
+    #   (160 - n) // self.wall_grid_factor: (160 + n) // self.wall_grid_factor,
+    #   (120 - n) // self.wall_grid_factor: (120 + n) // self.wall_grid_factor]
 
 
   def get_game_screen(self) -> NDArray[np.uint8]:

@@ -29,9 +29,13 @@ class Entity:
 
 
 class Vec2:
-  def __init__(self, x, y):
-    self.x = x
-    self.y = y
+  def __init__(self, x: float, y: float):
+    self.x: float = x
+    self.y: float = y
+
+
+  def __str__(self):
+    return '({}, {})'.format(self.x, self.y)
 
 
   def set_length(self, l: float):

@@ -1,4 +1,5 @@
 import numpy as np
+import matplotlib.pyplot as plt
 import tkinter as tk
 import json
 
@@ -75,11 +76,10 @@ class BotUI(Thread):
     self.canvas_screen = tk.Canvas(self.root, bg='magenta',
         width=screen_size[0] - 2,
         height=screen_size[1] - 2)
+    self.canvas_screen.pack(side=tk.TOP)
 
     self.wall_grid: Grid = Grid(screen_size, self.canvas_screen)
     self.screen_viewer = ScreenViewer(2, self.canvas_screen, self.bot)
-
-    self.canvas_screen.pack(side=tk.TOP)
 
     self.btn_pause = tk.Button(self.root, text="Pause",
         command = self.pause_handle)
@@ -88,6 +88,10 @@ class BotUI(Thread):
     self.btn_show_grid = tk.Button(self.root, text="Show Grid",
         command = self.grid_handle)
     self.btn_show_grid.pack(side=tk.TOP)
+
+    self.btn_new_window = tk.Button(self.root, text="Show RL input",
+        command = self.open_rl_input_window)
+    self.btn_new_window.pack(side=tk.TOP)
 
     self.lst_entities = tk.Listbox(self.root, selectmode=tk.SINGLE)
     self.lst_entities.pack(side=tk.LEFT, anchor=tk.NW)
@@ -165,3 +169,17 @@ class BotUI(Thread):
       self.bot.update()
       if self.bot.pause:
         self.pause()
+
+
+  def open_rl_input_window(self):
+    rl_input = self.bot.create_RL_input()
+    H = rl_input.transpose()
+
+    fig = plt.figure(figsize=(6, 3.2))
+
+    ax = fig.add_subplot(111)
+    ax.set_title('RL input')
+    plt.imshow(H)
+    ax.set_aspect('equal')
+    ax.invert_yaxis()
+    plt.show()

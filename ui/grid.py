@@ -8,12 +8,14 @@ from common import log
 from typing import Tuple
 
 class Grid:
-  def __init__(self, size: Tuple[int, int], canvas: tk.Canvas, ):
+  def __init__(self, size: Tuple[int, int], canvas: tk.Canvas, fill: str = 'red', stipple: str = 'gray25'):
     self.canvas = canvas
     self.grid_rects: List[int] = []
     self.is_visible = False
     self.grid = np.zeros([0])
     self.size = size
+    self.fill = fill
+    self.stipple = stipple
 
   def _delete(self):
     for r in self.grid_rects:
@@ -31,7 +33,7 @@ class Grid:
           self.grid_rects.append(
             self.canvas.create_rectangle(
                 i*cellx, (n-j)*celly,(i+1)*cellx,(n - j -1)*celly,
-                fill='red', stipple="gray25"))
+                fill=self.fill))
 
 
   def update(self, grid: NDArray):

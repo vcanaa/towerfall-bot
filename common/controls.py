@@ -1,10 +1,25 @@
 import sys
+import json
 
 from math import atan2, pi
 
 from common import reply, Vec2
 
+from .connection import Connection
+
+from typing import Optional
+
+
 pi8 = pi / 8
+
+
+def _get_command(command_set: set[str]):
+  s = ''
+  # print(command_set)
+  for c in command_set:
+    s += c
+  return s
+
 
 class Controls:
   def __init__(self):
@@ -48,17 +63,22 @@ class Controls:
     if a > pi8 and a < 7*pi8:
       self.up()
 
-  def __print(self):
-    for c in self.curr:
-      sys.stdout.write(c)
-
-  def __swap(self):
+  def _swap(self):
     aux = self.curr
     self.curr = self.past
     self.past = aux
 
-  def reply(self):
-    self.__print()
-    self.__swap()
+  def _msg(self) -> str:
+    msg = json.dumps({
+      'type': 'command',
+      'command': _get_command(self.curr)
+    })
+    return msg
+
+  def reply(self, conn: Optional[Connection] = None):
+    if conn:
+      conn.write(self._msg())
+    else:
+      reply(self._msg())
+    self._swap()
     self.curr.clear()
-    reply()

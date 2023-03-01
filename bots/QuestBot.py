@@ -1,19 +1,25 @@
 import sys
 import json
 import random
+import socket
 
 from multiprocessing import shared_memory
 
 import numpy as np
 
 from numpy.typing import ArrayLike, NDArray
-from threading import Lock
+from threading import Lock, Thread
+
 
 from math import cos, sin
 
 from common import *
+from .trainer import *
 
 from typing import Any, List, Optional, Tuple
+
+HOST = "127.0.0.1"  # The server's hostname or IP address
+PORT = 9000  # The port used by the server
 
 class QuestBot:
   def __init__(self):
@@ -27,6 +33,13 @@ class QuestBot:
     self.shm = shared_memory.SharedMemory(name='towerfallScreen')
     self.shootcd: float = 0
     self.pause = False
+    # self.move_trainer = MoveTrainer()
+    self.connection = Connection('127.0.0.1', 9000)
+
+
+  def __del__(self):
+    del self.connection
+
 
   def run(self):
     while True:
@@ -34,14 +47,19 @@ class QuestBot:
 
 
   def update(self):
-    gameState = json.loads(sys.stdin.readline())
+    gameState = json.loads(self.connection.read())
+    # gameState = json.loads(sys.stdin.readline())
     if gameState['type'] == 'init':
       self.handleInit(gameState)
 
     if gameState['type'] == 'scenario':
+      # if not self.stateInit:
+      #   self.connection.write('{"type":"config"}')
       self.handleScenario(gameState)
 
     if gameState['type'] == 'update':
+      # if not self.stateScenario:
+      #   self.connection.write('{"type":"config"}')
       self.handleUpdate(gameState)
 
 
@@ -49,14 +67,15 @@ class QuestBot:
     log("handleInit")
     self.stateInit = state
     random.seed(state['index'])
-    reply()
+    self.connection.write('.')
 
 
   def handleScenario(self, state: dict):
     log("handleScenario")
+    self.stateScenario = state
     self.fixed_grid = np.array(state['grid'])
     self.create_static_wall_grid()
-    reply()
+    self.connection.write('.')
 
 
   def getPlayer(self, entities: List[Entity]):
@@ -212,36 +231,39 @@ class QuestBot:
       self.pathToTarget = None
       self.entities: List[Entity] = to_entities(state['entities'])
       self.getPlayer(self.entities)
+      # print(len(self.entities))
       # self.adjustEntitiesPos()
 
       self.updateGrid()
 
       if self.me == None:
-        reply()
+        log('no me')
+        self.connection.write('.')
         return
 
+      # self.move_trainer.update(self.grid, self.me, self.control)
       if chance(10):
         self.control.dash()
 
       if chance(20):
         self.control.jump()
 
-      enemy, pathToEnemy = self.getClosestEnemy(self.entities)
-      if not enemy or not pathToEnemy:
-        arrow, pathToArrow = self.getClosestStuckArrow()
-        if arrow and pathToArrow:
-          self.target = arrow
-          self.pathToTarget = pathToArrow
-          self.chase(pathToArrow.checkpoint.pos)
-        reply()
-        return
+      # enemy, pathToEnemy = self.getClosestEnemy(self.entities)
+      # if not enemy or not pathToEnemy:
+      #   arrow, pathToArrow = self.getClosestStuckArrow()
+      #   if arrow and pathToArrow:
+      #     self.target = arrow
+      #     self.pathToTarget = pathToArrow
+      #     self.chase(pathToArrow.checkpoint.pos)
+      #   self.control.reply(self.connection)
+      #   return
 
-      if hasArrows(self.me):
-        self.fightWithArrows(enemy, pathToEnemy)
-      else:
-        self.fightWithoutArrows(enemy, pathToEnemy)
+      # if hasArrows(self.me):
+      #   self.fightWithArrows(enemy, pathToEnemy)
+      # else:
+      #   self.fightWithoutArrows(enemy, pathToEnemy)
 
-      self.control.reply()
+      self.control.reply(self.connection)
     finally:
       self.update_lock.release()
 
@@ -262,15 +284,14 @@ class QuestBot:
     a = self.static_wall_grid.copy()
     for e in self.entities:
       if e.type == 'crackedWall':
-        log('Fill cracked wall')
+        # log('Fill cracked wall')
         self.fillGrid(e, a, True)
-    return a
-    # a = np.roll(self.static_wall_grid, -int(self.me.p.x - 160) // self.wall_grid_factor, axis=0)
-    # a = np.roll(a, -int(self.me.p.y - 120) // self.wall_grid_factor, axis=1)
-    # n = 50
-    # return a[
-    #   (160 - n) // self.wall_grid_factor: (160 + n) // self.wall_grid_factor,
-    #   (120 - n) // self.wall_grid_factor: (120 + n) // self.wall_grid_factor]
+    a = np.roll(self.static_wall_grid, -int(self.me.p.x - 160) // self.wall_grid_factor, axis=0)
+    a = np.roll(a, -int(self.me.p.y - 120) // self.wall_grid_factor, axis=1)
+    n = 50
+    return a[
+      (160 - n) // self.wall_grid_factor: (160 + n) // self.wall_grid_factor,
+      (120 - n) // self.wall_grid_factor: (120 + n) // self.wall_grid_factor]
 
 
   def get_game_screen(self) -> NDArray[np.uint8]:

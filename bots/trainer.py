@@ -1,16 +1,13 @@
-from gym import Env
 from common import *
 from stable_baselines3 import DQN
-from stable_baselines3.common.env_checker import check_env
 from threading import Thread
 
-class MoveTrainer(Env):
-  def __init__(self):
-    self.done = False
-    self.target = None
-    self.env = EnvWrap()
-    check_env(self.env)
-    self.frames = 0
+
+class MoveTrainer():
+  def __init__(self,
+      connection: Connection):
+    self.env = EnvWrap(grid_factor=4, sight=50, connection=connection)
+
     self.move_model = DQN(
       env=self.env,
       batch_size=128,
@@ -33,17 +30,13 @@ class MoveTrainer(Env):
     self.th_learn = Thread(target=learn)
 
 
-  def update(self, grid: NDArray, me: Entity, controls: Controls):
-    def rand_double_region(a: float, b: float):
-      x = random.randint(int(a), int(b))
-      return x if random.randint(0, 1) else x
-
+  def update(self, entities: List[Entity], me: Entity, controls: Controls):
     if self.target == None or self.done:
       while True:
         x = me.p.x + rand_double_region(30, 50)
         y = me.p.y + rand_double_region(30, 50)
-        i, j = gridPos(Vec2(x, y))
-        if not grid[i][j]:
+        i, j = grid_pos(Vec2(x, y), self.csize)
+        if not self.fixed_grid[i][j]:
           break
       self.target = Entity(e = {
         'pos': {'x': x, 'y': y},
@@ -51,7 +44,10 @@ class MoveTrainer(Env):
         'type': 'fake'
       })
 
-    target_dist = distance(me.p, self.target.p)
+    displ = self.target.p.copy()
+    displ.sub(me.p)
+    displ.mul(self.wgf)
+    target_dist = displ.length()
     rew = 0
     if (self.frames > 0):
       if self.prev_target_dist > 0:
@@ -62,7 +58,14 @@ class MoveTrainer(Env):
     if target_dist > 50:
       self.done = True
     self.prev_target_dist = target_dist
-    self.env.update(obs=grid, rew=0, done=self.done)
+
+    rl_grid = self._create_RL_input(entities, me)
+    position: NDArray = np.array([displ.x, displ.y], dtype=np.uint8)
+    self.env.update(
+      grid=rl_grid,
+      position=position,
+      rew=0,
+      done=self.done)
     actions = self.env.get_actions()
 
     if actions[0]:

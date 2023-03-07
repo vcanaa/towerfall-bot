@@ -6,7 +6,9 @@ from math import sqrt
 from .entity import Vec2, Entity, vec2_from_dict
 
 from typing import Optional, Tuple, List
+from numpy.typing import NDArray
 
+from .constants import WIDTH, HEIGHT
 
 
 def reply(msg: Optional[str] = None):
@@ -56,17 +58,23 @@ def bounded(v, left, right):
   return v
 
 
-def gridPos(p: Vec2) -> Tuple[int, int]:
-  return (int(p.x/10) % 32, int(p.y/10) % 24)
+def grid_pos(p: Vec2, cell_size: int) -> Tuple[int, int]:
+  return (int(p.x % WIDTH) // cell_size, int(p.y % HEIGHT) // cell_size)
 
 
-def isCleanPath(p1: Vec2, p2: Vec2, grid) -> bool:
+def isCleanPath(p1: Vec2, p2: Vec2, grid: NDArray, cell_size: int) -> bool:
   dp = diff(p2, p1)
   dp.set_length(5)
   p = p1.copy()
   for i in range(int(dp.length())):
-    pgrid = gridPos(p)
+    pgrid = grid_pos(p, cell_size)
     if grid[pgrid[0]][pgrid[1]] == 1:
       return False
     p.add(dp)
   return True
+
+
+def rand_double_region(a: float, b: float):
+  x = random.randint(int(a), int(b))
+  return x if random.randint(0, 1) else -x
+

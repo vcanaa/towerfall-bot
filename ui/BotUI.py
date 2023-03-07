@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import tkinter as tk
 import json
 
-from bots import QuestBot
+from bots import QuestBotRL
 from threading import Thread
 
 from common import log, Entity, Path
@@ -17,8 +17,8 @@ from .ScreenViewer import ScreenViewer
 screen_size = (320*2, 240*2)
 
 class BotUI(Thread):
-  def __init__(self, bot: QuestBot):
-    self.bot: QuestBot = bot
+  def __init__(self, bot: QuestBotRL):
+    self.bot: QuestBotRL = bot
     self.is_paused = False
     self.show_grid = False
     Thread.__init__(self)

@@ -1,5 +1,7 @@
 import socket
 
+from .common import log
+
 BYTE_ORDER = 'big'
 ENCODING = 'ascii'
 
@@ -17,6 +19,7 @@ class Connection:
       del self._socket
 
   def write(self, msg):
+    # log('write: {}'.format(msg))
     size = len(msg)
     self._socket.sendall(size.to_bytes(2, byteorder=BYTE_ORDER))
     self._socket.sendall(msg.encode(ENCODING))

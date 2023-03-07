@@ -56,6 +56,18 @@ class Vec2:
     self.x += v.x
     self.y += v.y
 
+  def sub(self, v: Vec2):
+    self.x -= v.x
+    self.y -= v.y
+
+  def mul(self, f: float):
+    self.x *= f
+    self.y *= f
+
+  def div(self, f: float):
+    self.x /= f
+    self.y /= f
+
 
 def vec2_from_dict(p: dict) -> Vec2:
   try:

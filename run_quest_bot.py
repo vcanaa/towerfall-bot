@@ -1,5 +1,8 @@
 from ui import BotUI
-from bots import QuestBot
+from bots import QuestBotRL
 
-BotUI(QuestBot()).start()
+
+BotUI(QuestBotRL()).start()
+
+# BotUI(QuestBot()).start()
 # QuestBot().run()

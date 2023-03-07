@@ -84,10 +84,10 @@ class PathGrid:
 
   def getClosestEntity(self, startPos: Vec2, entities: List[Entity], wall) -> Tuple[Optional[Entity], Optional[Path]]:
     for e in entities:
-      p = gridPos(e.p)
+      p = grid_pos(e.p)
       self.cell(p[0], p[1]).entities.append(e)
 
-    p = gridPos(startPos)
+    p = grid_pos(startPos)
     startCell = self.cell(p[0], p[1])
     to_visit: List[PathCell] = [startCell]
     while to_visit:

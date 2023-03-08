@@ -97,6 +97,10 @@ class BotUI(Thread):
         command = self.grid_handle)
     self.btn_show_grid.pack(side=tk.TOP)
 
+    self.btn_reset = tk.Button(self.root, text="Reset",
+        command = self.reset_handle)
+    self.btn_reset.pack(side=tk.TOP)
+
     self.lst_entities = tk.Listbox(self.root, selectmode=tk.SINGLE)
     self.lst_entities.pack(side=tk.LEFT, anchor=tk.NW)
 
@@ -166,13 +170,19 @@ class BotUI(Thread):
     self.wall_grid.update(self.bot.grid())
 
 
+  def reset_handle(self):
+    self.bot.reset()
+
+
   def update(self):
-    while self.alive:
-      if self.is_paused:
-        return
-      self.bot.update()
-      if self.bot.pause:
-        self.pause()
-    self.bot.stop()
-    log('update finished')
+    try:
+      while self.alive:
+        if self.is_paused:
+          return
+        self.bot.update()
+        if self.bot.pause:
+          self.pause()
+    finally:
+      self.bot.stop()
+      log('update finished')
 

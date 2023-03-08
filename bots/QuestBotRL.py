@@ -1,14 +1,12 @@
-import sys
 import json
 import random
-import socket
 
 from multiprocessing import shared_memory
 
 import numpy as np
 
-from numpy.typing import ArrayLike, NDArray
-from threading import Lock, Thread
+from numpy.typing import NDArray
+from threading import Lock
 
 
 from math import cos, sin
@@ -33,6 +31,7 @@ class QuestBotRL:
     self.connection = Connection('127.0.0.1', 9000)
     self.gv = GridView(1)
     self.control: Controls = Controls(is_human=True)
+    self.should_reset = False
 
 
   def __del__(self):
@@ -50,12 +49,23 @@ class QuestBotRL:
       self.control.stop()
 
 
+  def reset(self):
+    self.should_reset = True
+
+
   def stop(self):
     self.control.stop()
+    if hasattr(self, 'connection'):
+      del self.connection
 
 
   def update(self):
     gameState = json.loads(self.connection.read())
+    if self.should_reset:
+      self.connection.write_instruction('config')
+      self.should_reset = False
+      return
+
     if gameState['type'] == 'init':
       self.handleInit(gameState)
 

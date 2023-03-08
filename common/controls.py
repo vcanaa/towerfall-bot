@@ -73,14 +73,15 @@ class Controls:
           self.lock.release()
 
       def listen_joystick():
+        log('Listening joystick')
         run_event_loop(print_add, print_remove, key_received, alive)
 
       self.thr = Thread(target=listen_joystick).start()
 
 
   def stop(self):
-    log('stop')
     if hasattr(self, 'is_alive'):
+      log('stop Controls')
       self.is_alive = False
 
 

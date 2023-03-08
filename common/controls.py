@@ -1,12 +1,13 @@
 import sys
 import json
+import logging
 
 from math import atan2, pi
 from threading import Thread, Lock
 
 from pyjoystick.sdl2 import Key, Joystick, run_event_loop
 
-from common import reply, Vec2, log
+from common import reply, Vec2
 
 from .connection import Connection
 
@@ -49,17 +50,17 @@ class Controls:
         return self.is_alive
 
       def print_add(joy: Joystick):
-        log('Joystick added {}'.format(joy))
+        logging.info('Joystick added {}'.format(joy))
 
       def print_remove(joy: Joystick):
-        log('Joystick removed {}'.format(joy))
+        logging.info('Joystick removed {}'.format(joy))
 
       def key_received(key: Key):
         self.lock.acquire()
         try:
           if key.keytype == Key.AXIS:
             return
-          # log('Key: {}'.format(key.value))
+          # logging.info('Key: {}'.format(key.value))
           if key.number not in KEYMAP:
             return
           keynum = KEYMAP[key.number]
@@ -73,7 +74,7 @@ class Controls:
           self.lock.release()
 
       def listen_joystick():
-        log('Listening joystick')
+        logging.info('Listening joystick')
         run_event_loop(print_add, print_remove, key_received, alive)
 
       self.thr = Thread(target=listen_joystick).start()
@@ -81,7 +82,7 @@ class Controls:
 
   def stop(self):
     if hasattr(self, 'is_alive'):
-      log('stop Controls')
+      logging.info('stop Controls')
       self.is_alive = False
 
 

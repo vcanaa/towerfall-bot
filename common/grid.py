@@ -1,9 +1,11 @@
+import logging
+
 import numpy as np
 import matplotlib.pyplot as plt
 
 from numpy.typing import NDArray
 
-from .common import WIDTH, HEIGHT, Entity, bounded, log
+from .common import WIDTH, HEIGHT, Entity, bounded
 
 from typing import List
 
@@ -34,7 +36,7 @@ def fill_grid(e: Entity, grid: NDArray, shouldLog = False):
   y1 = int(bounded(topLeft.y // factor, 0, grid.shape[1]))
   y2 = int(bounded(botRight.y // factor, 0, grid.shape[1]))
   if shouldLog:
-    log("{} {} {} {}".format(x1,x2,y1,y2))
+    logging.info("{} {} {} {}".format(x1,x2,y1,y2))
   if x2 > x1:
     if y2 > y1:
       grid[x1:x2, y1:y2] = 1
@@ -76,7 +78,7 @@ class GridView():
     # self._plot_grid(a, 'a')
     self.shifted_grid = np.roll(self.grid, -int(me.p.x - WIDTH // 2) // self.gf, axis=0)
     self.shifted_grid = np.roll(self.shifted_grid, -int(me.p.y - HEIGHT // 2) // self.gf, axis=1)
-    # log('obs_grid: {}'.format(self.obs_grid.shape))
+    # logging.info('obs_grid: {}'.format(self.obs_grid.shape))
     # self._plot_grid(self.obs_grid, 'obs_grid')
     # print(self.obs_grid)
 

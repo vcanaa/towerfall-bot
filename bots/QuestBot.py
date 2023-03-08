@@ -2,6 +2,7 @@ import sys
 import json
 import random
 import socket
+import logging
 
 from multiprocessing import shared_memory
 
@@ -64,14 +65,14 @@ class QuestBot:
 
 
   def handleInit(self, state: dict):
-    log("handleInit")
+    logging.info("handleInit")
     self.stateInit = state
     random.seed(state['index'])
     self.connection.write('.')
 
 
   def handleScenario(self, state: dict):
-    log("handleScenario")
+    logging.info("handleScenario")
     self.stateScenario = state
     self.fixed_grid = np.array(state['grid'])
     self.create_static_wall_grid()
@@ -196,7 +197,7 @@ class QuestBot:
     y1 = int(bounded(topLeft.y // factor, 0, grid.shape[1]))
     y2 = int(bounded(botRight.y // factor, 0, grid.shape[1]))
     if shouldLog:
-      log("{} {} {} {}".format(x1,x2,y1,y2))
+      logging.info("{} {} {} {}".format(x1,x2,y1,y2))
     if x2 > x1:
       if y2 > y1:
         grid[x1:x2, y1:y2] = 1
@@ -237,7 +238,7 @@ class QuestBot:
       self.updateGrid()
 
       if self.me == None:
-        log('no me')
+        logging.info('no me')
         self.connection.write('.')
         return
 
@@ -284,7 +285,7 @@ class QuestBot:
     a = self.static_wall_grid.copy()
     for e in self.entities:
       if e.type == 'crackedWall':
-        # log('Fill cracked wall')
+        # logging.info('Fill cracked wall')
         self.fillGrid(e, a, True)
     a = np.roll(self.static_wall_grid, -int(self.me.p.x - 160) // self.wall_grid_factor, axis=0)
     a = np.roll(a, -int(self.me.p.y - 120) // self.wall_grid_factor, axis=1)

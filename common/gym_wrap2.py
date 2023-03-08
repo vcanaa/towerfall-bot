@@ -1,8 +1,9 @@
 import json
+import logging
 import numpy as np
 import matplotlib.pyplot as plt
 
-from common import log, Connection, Entity, to_entities, fill_grid, rand_double_region, grid_pos, Vec2, WIDTH, HEIGHT
+from common import  Connection, Entity, to_entities, fill_grid, rand_double_region, grid_pos, Vec2, WIDTH, HEIGHT
 
 from typing import List
 from numpy.typing import NDArray
@@ -37,14 +38,14 @@ class EnvWrap(Env):
 
 
   def reset(self):
-    # log('reset')
+    # logging.info('reset')
     self._write_instruction('config', pos={'x': 160, 'y': 80})
 
     game_state = self._read_game_state()
     # print(game_state['type'])
     assert game_state['type'] == 'init'
     self.index = game_state['index']
-    # log('index: {}'.format(self.index))
+    # logging.info('index: {}'.format(self.index))
     self.connection.write('.')
     self.frame = 0
 
@@ -52,14 +53,14 @@ class EnvWrap(Env):
     # print(game_state['type'])
     assert game_state['type'] == 'scenario'
     self.gv.set_scenario(game_state)
-    # log('grid: {}'.format(self.fixed_grid.shape))
+    # logging.info('grid: {}'.format(self.fixed_grid.shape))
     self.connection.write('.')
 
     game_state = self._read_game_state()
     # print(game_state['type'])
     assert game_state['type'] == 'update'
     self._handle_update(game_state)
-    # log('entities: {}'.format(len(self.entities)))
+    # logging.info('entities: {}'.format(len(self.entities)))
     self._set_new_target()
     displ = self._get_target_displ()
     self.obs_target: NDArray = np.array([displ.x, displ.y], dtype=np.int8)
@@ -72,7 +73,7 @@ class EnvWrap(Env):
 
 
   def step(self, actions: NDArray):
-    # log('step')
+    # logging.info('step')
     command = ''
     if actions[0] == -1:
       command += 'l'
@@ -101,7 +102,7 @@ class EnvWrap(Env):
 
 
   def render(self, mode='human'):
-    # log('render')
+    # logging.info('render')
     pass
 
 
@@ -135,9 +136,9 @@ class EnvWrap(Env):
     while True:
       x = self.me.p.x + rand_double_region(0.5*self.sight, self.sight)
       y = self.me.p.y + rand_double_region(0.5*self.sight, self.sight)
-      # log('(x, y): ({} {})'.format(x, y))
+      # logging.info('(x, y): ({} {})'.format(x, y))
       i, j = grid_pos(Vec2(x, y), self.gv.csize)
-      # log('(i, j): ({} {})'.format(i, j))
+      # logging.info('(i, j): ({} {})'.format(i, j))
       if not self.gv.fixed_grid[i][j]:
         break
     self.target = Entity(e = {

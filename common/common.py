@@ -18,12 +18,6 @@ def reply(msg: Optional[str] = None):
   sys.stdout.flush()
 
 
-def log(msg: str):
-  sys.stderr.write(msg)
-  sys.stderr.write('\n')
-  sys.stderr.flush()
-
-
 def press(b: str):
   sys.stdout.write(b)
 

@@ -3,8 +3,6 @@ import tkinter as tk
 from typing import List
 from numpy.typing import NDArray
 
-from common import log
-
 from typing import Tuple
 
 class Grid:

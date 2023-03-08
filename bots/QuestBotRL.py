@@ -35,7 +35,7 @@ class QuestBotRL:
 
 
   def __del__(self):
-    log('del bot')
+    logging.info('del bot')
     if hasattr(self, 'connection'):
       del self.connection
 
@@ -76,14 +76,14 @@ class QuestBotRL:
 
 
   def handleInit(self, state: dict):
-    log("handleInit")
+    logging.info("handleInit")
     self.stateInit = state
     random.seed(state['index'])
     self.connection.write('.')
 
 
   def handleScenario(self, state: dict):
-    log("handleScenario")
+    logging.info("handleScenario")
     self.stateScenario = state
     self.gv.set_scenario(state)
     self.connection.write('.')

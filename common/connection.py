@@ -1,7 +1,7 @@
 import socket
 import json
 
-from .common import log, Vec2
+from .common import Vec2
 
 from typing import Optional
 
@@ -22,7 +22,7 @@ class Connection:
       del self._socket
 
   def write(self, msg):
-    # log('write: {}'.format(msg))
+    # logging.info('write: {}'.format(msg))
     size = len(msg)
     self._socket.sendall(size.to_bytes(2, byteorder=BYTE_ORDER))
     self._socket.sendall(msg.encode(ENCODING))

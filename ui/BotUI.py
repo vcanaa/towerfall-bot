@@ -1,3 +1,4 @@
+import logging
 import numpy as np
 import matplotlib.pyplot as plt
 import tkinter as tk
@@ -6,7 +7,7 @@ import json
 from bots import QuestBotRL
 from threading import Thread
 
-from common import log, Entity, Path
+from common import Entity, Path
 
 from typing import Tuple, List
 
@@ -77,7 +78,7 @@ class BotUI(Thread):
       self.bot.stop()
       self.is_paused
       self.root.destroy()
-      log('on_closing')
+      logging.info('on_closing')
 
     self.root.protocol("WM_DELETE_WINDOW", on_closing)
 

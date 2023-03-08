@@ -57,7 +57,7 @@ class PathGrid:
     cell = end.prev
     while cell:
       cell.next = next
-      # log('link ({}, {}) to ({}, {})'.format(cell.i, cell.j, cell.next.i, cell.next.j))
+      # logging.info('link ({}, {}) to ({}, {})'.format(cell.i, cell.j, cell.next.i, cell.next.j))
       if cell == start:
         break
       next = cell
@@ -69,16 +69,16 @@ class PathGrid:
     prev = start
     cell = start.next
     while cell:
-      # log('create_path: {} {}'.format(cell.i, cell.j))
+      # logging.info('create_path: {} {}'.format(cell.i, cell.j))
       if not isCleanPath(start.pos, cell.pos, wall):
         return Path(start, end, prev)
       if cell == end:
         return Path(start, end, end)
       prev = cell
       cell = cell.next
-    # log("{} {}".format(start.i, start.j))
-    # log("{} {}".format(end.i, end.j))
-    # log("{} {}".format(prev.i, prev.j))
+    #logging.info("{} {}".format(start.i, start.j))
+    #logging.info("{} {}".format(end.i, end.j))
+    #logging.info("{} {}".format(prev.i, prev.j))
     raise Exception('A contiguous path between start and end is expected')
 
 

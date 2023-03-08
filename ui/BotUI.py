@@ -21,7 +21,6 @@ class BotUI(Thread):
     self.bot: QuestBotRL = bot
     self.is_paused = False
     self.show_grid = False
-    self.alive = True
     Thread.__init__(self)
 
 
@@ -75,7 +74,8 @@ class BotUI(Thread):
     self.root = tk.Tk()
 
     def on_closing():
-      self.alive = False
+      self.bot.stop()
+      self.is_paused
       self.root.destroy()
       log('on_closing')
 
@@ -175,14 +175,10 @@ class BotUI(Thread):
 
 
   def update(self):
-    try:
-      while self.alive:
-        if self.is_paused:
-          return
-        self.bot.update()
-        if self.bot.pause:
-          self.pause()
-    finally:
-      self.bot.stop()
-      log('update finished')
+    while True:
+      if self.is_paused:
+        return
+      self.bot.update()
+      if self.bot.pause:
+        self.pause()
 

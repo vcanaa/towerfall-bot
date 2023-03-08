@@ -49,17 +49,17 @@ class Controls:
         return self.is_alive
 
       def print_add(joy: Joystick):
-        log('Added {}'.format(joy))
+        log('Joystick added {}'.format(joy))
 
       def print_remove(joy: Joystick):
-        log('Removed {}'.format(joy))
+        log('Joystick removed {}'.format(joy))
 
       def key_received(key: Key):
         self.lock.acquire()
         try:
           if key.keytype == Key.AXIS:
             return
-          log('Key: {}'.format(key.value))
+          # log('Key: {}'.format(key.value))
           if key.number not in KEYMAP:
             return
           keynum = KEYMAP[key.number]

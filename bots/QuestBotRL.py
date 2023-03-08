@@ -35,6 +35,7 @@ class QuestBotRL:
 
 
   def __del__(self):
+    log('del bot')
     if hasattr(self, 'connection'):
       del self.connection
 
@@ -55,8 +56,6 @@ class QuestBotRL:
 
   def stop(self):
     self.control.stop()
-    if hasattr(self, 'connection'):
-      del self.connection
 
 
   def update(self):
@@ -98,32 +97,14 @@ class QuestBotRL:
           return e
 
 
-  def chase(self, pos: Vec2):
-    if not self.me['onGround']:
-      self.control.aim(diff(pos, self.me.p))
-    else:
-      if self.me.p.x < pos.x:
-        self.control.right()
-      else:
-        self.control.left()
-
-
-  def flee(self, pos: Vec2):
-    if not self.me['onGround']:
-      self.control.aim(diff(self.me.p, pos))
-    else:
-      if self.me.p.x < pos.x:
-        self.control.left()
-      else:
-        self.control.right()
-
-
   def handleUpdate(self, state):
     self.update_lock.acquire()
     try:
       self.entities: List[Entity] = to_entities(state['entities'])
       self.getPlayer(self.entities)
       self.gv.update(self.entities, self.me)
+
+
 
       if self.me == None:
         raise Exception('no me')

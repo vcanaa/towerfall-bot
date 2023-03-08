@@ -1,6 +1,9 @@
 import socket
+import json
 
-from .common import log
+from .common import log, Vec2
+
+from typing import Optional
 
 BYTE_ORDER = 'big'
 ENCODING = 'ascii'
@@ -29,3 +32,12 @@ class Connection:
     size = int.from_bytes(header, BYTE_ORDER)
     payload = self._socket.recv(size)
     return payload.decode(ENCODING)
+
+  def write_instruction(self, type: str, command: str ='', pos: Optional[dict] = None):
+    resp: dict['str', object] = {
+      'type': type,
+      'command': command
+    }
+    if pos:
+      resp['pos'] = pos
+    self.write(json.dumps(resp))

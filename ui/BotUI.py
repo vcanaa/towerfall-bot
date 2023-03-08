@@ -21,6 +21,7 @@ class BotUI(Thread):
     self.bot: QuestBotRL = bot
     self.is_paused = False
     self.show_grid = False
+    self.alive = True
     Thread.__init__(self)
 
 
@@ -73,6 +74,13 @@ class BotUI(Thread):
   def run(self):
     self.root = tk.Tk()
 
+    def on_closing():
+      self.alive = False
+      self.root.destroy()
+      log('on_closing')
+
+    self.root.protocol("WM_DELETE_WINDOW", on_closing)
+
     self.canvas_screen = tk.Canvas(self.root, bg='magenta',
         width=screen_size[0] - 2,
         height=screen_size[1] - 2)
@@ -88,10 +96,6 @@ class BotUI(Thread):
     self.btn_show_grid = tk.Button(self.root, text="Show Grid",
         command = self.grid_handle)
     self.btn_show_grid.pack(side=tk.TOP)
-
-    self.btn_new_window = tk.Button(self.root, text="Show RL input",
-        command = self.open_rl_input_window)
-    self.btn_new_window.pack(side=tk.TOP)
 
     self.lst_entities = tk.Listbox(self.root, selectmode=tk.SINGLE)
     self.lst_entities.pack(side=tk.LEFT, anchor=tk.NW)
@@ -159,27 +163,16 @@ class BotUI(Thread):
     self.elements: List[Tuple[str, object]] = self.bot.get_entities()
     self.lst_entities.delete(0, tk.END)
     self.lst_entities.insert(tk.END, *[e[0] for e in self.elements])
-    self.wall_grid.update(self.bot.grid)
+    self.wall_grid.update(self.bot.grid())
 
 
   def update(self):
-    while True:
+    while self.alive:
       if self.is_paused:
         return
       self.bot.update()
       if self.bot.pause:
         self.pause()
+    self.bot.stop()
+    log('update finished')
 
-
-  def open_rl_input_window(self):
-    rl_input = self.bot.create_RL_input()
-    H = rl_input.transpose()
-
-    fig = plt.figure(figsize=(6, 3.2))
-
-    ax = fig.add_subplot(111)
-    ax.set_title('RL input')
-    plt.imshow(H)
-    ax.set_aspect('equal')
-    ax.invert_yaxis()
-    plt.show()

@@ -2,8 +2,11 @@ import sys
 import json
 
 from math import atan2, pi
+from threading import Thread, Lock
 
-from common import reply, Vec2
+from pyjoystick.sdl2 import Key, Joystick, run_event_loop
+
+from common import reply, Vec2, log
 
 from .connection import Connection
 
@@ -21,10 +24,65 @@ def _get_command(command_set: set[str]):
   return s
 
 
+KEYMAP = {
+  0: 'j',
+  2: 's',
+  3: 'c',
+  10: 'z',
+  11: 'u',
+  12: 'd',
+  13: 'l',
+  14: 'r'
+}
+
 class Controls:
-  def __init__(self):
+  def __init__(self, is_human: bool = False):
     self.past: set[str] = set()
     self.curr: set[str] = set()
+    self.lock = Lock()
+    self.is_human = is_human
+
+    if is_human:
+      self.is_alive = True
+
+      def alive():
+        return self.is_alive
+
+      def print_add(joy: Joystick):
+        log('Added {}'.format(joy))
+
+      def print_remove(joy: Joystick):
+        log('Removed {}'.format(joy))
+
+      def key_received(key: Key):
+        self.lock.acquire()
+        try:
+          if key.keytype == Key.AXIS:
+            return
+          log('Key: {}'.format(key.value))
+          if key.number not in KEYMAP:
+            return
+          keynum = KEYMAP[key.number]
+          if key.value:
+            self.curr.add(keynum)
+          else:
+            if keynum not in self.curr:
+              return
+            self.curr.remove(keynum)
+        finally:
+          self.lock.release()
+
+      def listen_joystick():
+        run_event_loop(print_add, print_remove, key_received, alive)
+
+      self.thr = Thread(target=listen_joystick).start()
+
+
+  def stop(self):
+    log('stop')
+    if hasattr(self, 'is_alive'):
+      self.is_alive = False
+
 
   def try_press(self, c):
     if c in self.past:
@@ -76,9 +134,15 @@ class Controls:
     return msg
 
   def reply(self, conn: Optional[Connection] = None):
-    if conn:
-      conn.write(self._msg())
-    else:
-      reply(self._msg())
-    self._swap()
-    self.curr.clear()
+    self.lock.acquire()
+    try:
+      if conn:
+        conn.write(self._msg())
+      else:
+        reply(self._msg())
+
+      if not self.is_human:
+        self._swap()
+        self.curr.clear()
+    finally:
+      self.lock.release()

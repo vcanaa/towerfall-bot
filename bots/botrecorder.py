@@ -17,6 +17,7 @@ PORT = 12024
 
 class BotRecorder(Bot):
   def __init__(self):
+    super(BotRecorder, self).__init__()
     self.stateInit: Any
     self.stateUpdate: Any
     self.entities: List[Entity]

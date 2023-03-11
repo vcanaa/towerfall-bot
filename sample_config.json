@@ -1,0 +1,40 @@
+// Uncomment one of the modes and one of the bots. Uncomment at least 2 bots for versus.
+
+{
+  // "mode": "quest",
+  // "skipWaves": 0,
+
+  "mode": "versus",
+  "rounds": 1,
+
+  "level": 2,
+  "fastrun": true, // Set to true to make the game run in a closed loop as fast as possible.
+
+  "bots": [
+    // {
+    //   // Bot that connects over socket. Run the bot process while the game is running.
+    //   "ip": "127.0.0.1",
+    //   "port": 12024,
+    //   "team": "red",
+    //   "archer": "blue",
+    // },
+
+    // {
+    //   // Game takes input from controller/keyboard.
+    //   "ishuman": true,
+    //   "team": "blue",
+    //   "archer": "green"
+    // },
+
+    {
+      "execute": "python.exe aimod/run_simple_bot.py",
+      "team": "red",
+      "archer": "green"
+    },
+    {
+      "execute": "python.exe aimod/run_simple_bot.py",
+      "team": "blue",
+      "archer": "blue"
+    },
+  ]
+}

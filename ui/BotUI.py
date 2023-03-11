@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import tkinter as tk
 import json
 
-from bots import QuestBotRL
+from bots import Bot
 from threading import Thread
 
 from common import Entity, GPath
@@ -18,8 +18,8 @@ from .ScreenViewer import ScreenViewer
 screen_size = (320*2, 240*2)
 
 class BotUI(Thread):
-  def __init__(self, bot: QuestBotRL):
-    self.bot: QuestBotRL = bot
+  def __init__(self, bot: Bot):
+    self.bot: Bot = bot
     self.is_paused = False
     self.show_grid = False
     Thread.__init__(self)
@@ -27,18 +27,6 @@ class BotUI(Thread):
 
   def show_entity(self, e: Entity):
     self.msg_info.configure(text=json.dumps(e.e, indent=2))
-    # self.canvas_screen.coords(self.rect_selection_id,
-    #   e.p.x * 2 - e.s.x + 320,
-    #   (240 - e.p.y) * 2 - e.s.y - 240,
-    #   e.p.x * 2 + e.s.x + 320,
-    #   (240 - e.p.y) * 2 + e.s.y - 240)
-    # width = max(15, e.s.x*2)
-    # height = max(15, e.s.y*2)
-    # self.canvas_screen.coords(self.circle_selection_id,
-    #   e.p.x * 2 - width + 320,
-    #   (240 - e.p.y) * 2 - height - 240,
-    #   e.p.x * 2 + width + 320,
-    #   (240 - e.p.y) * 2 + height - 240)
     self.canvas_screen.coords(self.rect_selection_id,
       e.p.x * 2 - e.s.x,
       (240 - e.p.y) * 2 - e.s.y,
@@ -180,6 +168,6 @@ class BotUI(Thread):
       if self.is_paused:
         return
       self.bot.update()
-      if self.bot.pause:
+      if self.bot.is_paused:
         self.pause()
 

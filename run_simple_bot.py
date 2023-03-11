@@ -2,41 +2,58 @@ import sys
 import json
 import random
 
-# The communication is done over stdin. Every line is a json. Every message read requires a reply.
+# The communication is done over stdin. Every line received is a json. Every message read requires a reply. Example:
+# {
+#   "type": "commands",
+#   "command": "ld"
+# }
 
-def reply(msg = None):
-  if msg:
-    sys.stdout.write(msg)
-  sys.stdout.write('\n')
+pressed = set()
+
+def reply():
+  print(json.dumps({
+    "type":"commands",
+    "command": ''.join(pressed)
+  }))
+  # Always flush after you are done.
   sys.stdout.flush()
+  pressed.clear()
 
 def press(b):
-  sys.stdout.write(b)
+  pressed.add(b)
+
+state_init = None
+state_scenario = None
+state_update = None
+
+# When communicating over stdio, make sure logging goes to stderr
+sys.stderr.write('I started')
+sys.stderr.flush()
 
 while True:
   # Read the state of the game in a loop.
-  gameState = json.loads(sys.stdin.readline())
+  game_state = json.loads(sys.stdin.readline())
 
   # There are three main types to handle, 'init', 'scenario' and 'update'.
   # Check 'type' to handle each accordingly.
-  if gameState['type'] == 'init':
+  if game_state['type'] == 'init':
     # 'init' is sent every time a match series starts. It contains information about the players and teams.
     # The seed is based on the bot index so each bots acts differently.
-    stateInit = gameState
-    random.seed(stateInit['index'])
+    state_init = game_state
+    random.seed(state_init['index'])
     reply()
     continue
 
-  if gameState['type'] == 'scenario':
+  if game_state['type'] == 'scenario':
     # 'scenario' informs your bot about the current state of the ground. Store this information
     # to use in all subsequent loops. (This example bot doesn't use the shape of the scenario)
-    stateScenario = gameState
+    state_scenario = game_state
     reply()
     continue
 
-  if gameState['type'] == 'update':
+  if game_state['type'] == 'update':
     # 'update' informs the state of entities in the map (players, arrows, enemies, etc).
-    stateUpdate = gameState
+    state_update = game_state
 
   # After receiving an 'update', your bot is expected to output string with the pressed buttons.
   # Each button is represented by a character:
@@ -57,47 +74,53 @@ while True:
   #  - Dashes randomly.
   #  - Jumps randomly.
 
-  myState = None
-  enemyState = None
+  my_state = None
+  enemy_state = None
 
   players = []
-  for state in stateUpdate['entities']:
-    if state['type'] == 'player':
+
+  if not state_init:
+    raise Exception('No state_init')
+  if not state_update:
+    raise Exception('No state_update')
+
+  for state in state_update['entities']:
+    if state['type'] == 'archer':
       players.append(state)
-      if state['playerIndex'] == stateInit['index']:
-        myState = state
+      if state['playerIndex'] == state_init['index']:
+        my_state = state
 
   # Bot only does anything if player is in game.
-  if myState == None:
+  if my_state == None:
     reply()
     continue
 
   for state in players:
-    if state['team'] != myState['team']:
-      enemyState = state
+    if state['team'] != my_state['team']:
+      enemy_state = state
 
   # Bot only does anything if there is a player.
-  if enemyState == None:
+  if enemy_state == None:
     reply()
     continue
 
-  myPos = myState['pos']
-  enemyPos = enemyState['pos']
-  if enemyPos['y'] >= myPos['y']:
+  my_pos = my_state['pos']
+  enemy_pos = enemy_state['pos']
+  if enemy_pos['y'] >= my_pos['y']:
     # Runs away if enemy is above
-    if myPos['x'] < enemyPos['x']:
+    if my_pos['x'] < enemy_pos['x']:
       press('l')
     else:
       press('r')
   else:
     # Runs to enemy if they are below
-    if myPos['x'] < enemyPos['x']:
+    if my_pos['x'] < enemy_pos['x']:
       press('r')
     else:
       press('l')
 
     # If in the same line shoots,
-    if abs(myPos['y'] - enemyPos['y']) < enemyState['size']['y']:
+    if abs(my_pos['y'] - enemy_pos['y']) < enemy_state['size']['y']:
       press('s')
 
   # Presses dash in 1/10 of the loops.

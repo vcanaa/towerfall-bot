@@ -3,10 +3,10 @@ from .common import *
 from typing import Optional, Tuple, List
 
 class PathCell:
-  def __init__(self, i, j, depth):
+  def __init__(self, i, j, depth, cell_size: int):
     self.i = i
     self.j = j
-    self.pos = Vec2(5+i*10, 5+j*10)
+    self.pos = Vec2((i+0.5)*cell_size, (j+0.5)*cell_size)
     self.depth = depth
     self.visited = False
     self.prev: Optional[PathCell] = None
@@ -26,8 +26,9 @@ class GPath:
 
 
 class PathGrid:
-  def __init__(self):
-    self.grid = [[PathCell(i, j, 0) for j in range(24)] for i in range(32)]
+  def __init__(self, cell_size: int):
+    self.grid = [[PathCell(i, j, 0, cell_size) for j in range(24)] for i in range(32)]
+    self.csize = cell_size
 
 
   def cell(self, i, j) -> PathCell:
@@ -70,7 +71,7 @@ class PathGrid:
     cell = start.next
     while cell:
       # logging.info('create_path: {} {}'.format(cell.i, cell.j))
-      if not isCleanPath(start.pos, cell.pos, wall):
+      if not is_clean_path(start.pos, cell.pos, wall, self.csize):
         return GPath(start, end, prev)
       if cell == end:
         return GPath(start, end, end)
@@ -82,12 +83,12 @@ class PathGrid:
     raise Exception('A contiguous path between start and end is expected')
 
 
-  def getClosestEntity(self, startPos: Vec2, entities: List[Entity], wall) -> Tuple[Optional[Entity], Optional[GPath]]:
+  def get_closest_entity(self, startPos: Vec2, entities: List[Entity], wall: NDArray) -> Tuple[Optional[Entity], Optional[GPath]]:
     for e in entities:
-      p = grid_pos(e.p)
+      p = grid_pos(e.p, self.csize)
       self.cell(p[0], p[1]).entities.append(e)
 
-    p = grid_pos(startPos)
+    p = grid_pos(startPos, self.csize)
     startCell = self.cell(p[0], p[1])
     to_visit: List[PathCell] = [startCell]
     while to_visit:

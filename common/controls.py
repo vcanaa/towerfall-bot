@@ -202,5 +202,6 @@ class Controls:
         self._swap()
         self.curr.clear()
     finally:
-      self.freeze_lock.release()
+      if self.freeze_lock.locked():
+        self.freeze_lock.release()
       self.lock.release()

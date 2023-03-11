@@ -1,8 +1,12 @@
 __pycache__
 .ipynb_checkpoints/
+
+config.json
+
+data/
+ignore/
 logs.txt
 models/
-runs/
-replays/
 models/
-data/
+replays/
+runs/

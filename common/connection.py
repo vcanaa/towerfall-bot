@@ -1,12 +1,10 @@
 import socket
 import json
 
-from .common import Vec2
-
 from typing import Optional
 
-BYTE_ORDER = 'big'
-ENCODING = 'ascii'
+_BYTE_ORDER = 'big'
+_ENCODING = 'ascii'
 
 class Connection:
   def __init__(self, ip: str, port: int):
@@ -22,16 +20,15 @@ class Connection:
       del self._socket
 
   def write(self, msg):
-    # logging.info('write: {}'.format(msg))
     size = len(msg)
-    self._socket.sendall(size.to_bytes(2, byteorder=BYTE_ORDER))
-    self._socket.sendall(msg.encode(ENCODING))
+    self._socket.sendall(size.to_bytes(2, byteorder=_BYTE_ORDER))
+    self._socket.sendall(msg.encode(_ENCODING))
 
   def read(self):
     header: bytes = self._socket.recv(2)
-    size = int.from_bytes(header, BYTE_ORDER)
+    size = int.from_bytes(header, _BYTE_ORDER)
     payload = self._socket.recv(size)
-    return payload.decode(ENCODING)
+    return payload.decode(_ENCODING)
 
   def write_instruction(self, type: str, command: str ='', pos: Optional[dict] = None):
     resp: dict['str', object] = {
@@ -41,3 +38,6 @@ class Connection:
     if pos:
       resp['pos'] = pos
     self.write(json.dumps(resp))
+
+  def write_reset(self, pos: Optional[dict] = None):
+    self.write_instruction('config', pos=pos)

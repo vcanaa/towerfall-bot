@@ -2,7 +2,7 @@ import tkinter as tk
 
 from PIL import Image, ImageTk
 
-from bots import QuestBotRL
+from bots import Bot
 
 from typing import Tuple
 
@@ -10,7 +10,7 @@ class ScreenViewer:
   def __init__(self,
       scale: int,
       canvas: tk.Canvas,
-      bot: QuestBotRL):
+      bot: Bot):
     self.scale = scale
     self.canvas = canvas
     self.bot = bot

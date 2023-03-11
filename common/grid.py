@@ -7,7 +7,7 @@ from numpy.typing import NDArray
 
 from .common import WIDTH, HEIGHT, Entity, bounded
 
-from typing import List
+from typing import List, Tuple, Union
 
 
 def plot_grid(grid: NDArray, name: str):
@@ -17,7 +17,8 @@ def plot_grid(grid: NDArray, name: str):
 
   ax = fig.add_subplot(111)
   ax.set_title(name)
-  plt.imshow(H)
+  im = plt.imshow(H)
+  im.set_clim(0, 1)
   ax.set_aspect('equal')
   ax.invert_yaxis()
   plt.show()
@@ -83,14 +84,19 @@ class GridView():
     # print(self.obs_grid)
 
 
-  def view_length(self, sight: int):
-    return sight // self.gf
+  def view_length(self, sight: Union[int, Tuple[int, int]]) -> Tuple[int, int]:
+    if isinstance(sight, int):
+      m = n = sight // self.gf
+    else:
+      m = sight[0] // self.gf
+      n = sight[1] // self.gf
+    return m, n
 
 
-  def view(self, sight: int):
-    n: int = self.view_length(sight)
+  def view(self, sight: Union[int, Tuple[int, int]]):
+    m, n = self.view_length(sight)
     W, H = self.fixed_grid.shape
     return self.shifted_grid[
-      W // 2 - n: W // 2 + n,
+      W // 2 - m: W // 2 + m,
       H // 2 - n: H // 2 + n,]
 

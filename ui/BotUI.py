@@ -7,7 +7,7 @@ import json
 from bots import QuestBotRL
 from threading import Thread
 
-from common import Entity, Path
+from common import Entity, GPath
 
 from typing import Tuple, List
 
@@ -61,7 +61,7 @@ class BotUI(Thread):
       self.canvas_screen.delete(rect_id)
 
 
-  def show_path(self, path: Path):
+  def show_path(self, path: GPath):
     if not hasattr(self, 'path_rects'):
       self.path_rects: List[int] = []
 
@@ -118,7 +118,7 @@ class BotUI(Thread):
       for element in self.elements[index][1:]:
         if isinstance(element, Entity):
           self.show_entity(element)
-        elif isinstance(element, Path):
+        elif isinstance(element, GPath):
           self.show_path(element)
         else:
           raise Exception('The type \'{}\' has no show function'.format(

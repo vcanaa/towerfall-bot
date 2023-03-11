@@ -87,13 +87,13 @@ class QuestBot:
           return e
 
 
-  def getClosestEnemy(self, entities: List[Entity]) -> Tuple[Optional[Entity], Optional[Path]]:
+  def getClosestEnemy(self, entities: List[Entity]) -> Tuple[Optional[Entity], Optional[GPath]]:
     enemies = [e for e in entities if e['isEnemy']]
     pathGrid = PathGrid()
     return pathGrid.getClosestEntity(vec2_from_dict(self.me['pos']), enemies, self.grid)
 
 
-  def getClosestStuckArrow(self) -> Tuple[Optional[Entity], Optional[Path]]:
+  def getClosestStuckArrow(self) -> Tuple[Optional[Entity], Optional[GPath]]:
     stuck_arrows = [e for e in self.entities if e.type == 'arrow' and is_stuck_arrow(e)]
     pathGrid = PathGrid()
     return pathGrid.getClosestEntity(vec2_from_dict(self.me['pos']), stuck_arrows, self.grid)
@@ -103,7 +103,7 @@ class QuestBot:
     return distance(self.me.p, p)
 
 
-  def fightWithArrows(self, enemy: Entity, pathToEnemy: Path):
+  def fightWithArrows(self, enemy: Entity, pathToEnemy: GPath):
     self.target = enemy
     self.pathToTarget = pathToEnemy
     dist = distance(self.me.p, enemy.p)
@@ -147,7 +147,7 @@ class QuestBot:
         self.control.right()
 
 
-  def fightWithoutArrows(self, enemy: Entity, pathToEnemy: Path):
+  def fightWithoutArrows(self, enemy: Entity, pathToEnemy: GPath):
     self.target = enemy
     self.pathToTarget = pathToEnemy
     enemy_dist: float = self.getDist(enemy.p)

@@ -14,7 +14,7 @@ class PathCell:
     self.entities = []
 
 
-class Path:
+class GPath:
   def __init__(self, start: PathCell, end: PathCell, checkpoint: PathCell):
     self.start = start
     self.end = end
@@ -49,9 +49,9 @@ class PathGrid:
     return wall[cell.i][cell.j] != 0
 
 
-  def create_path(self, start: PathCell, end: PathCell, wall) -> Path:
+  def create_path(self, start: PathCell, end: PathCell, wall) -> GPath:
     if start == end:
-      return Path(start, end, start)
+      return GPath(start, end, start)
 
     next = end
     cell = end.prev
@@ -71,9 +71,9 @@ class PathGrid:
     while cell:
       # logging.info('create_path: {} {}'.format(cell.i, cell.j))
       if not isCleanPath(start.pos, cell.pos, wall):
-        return Path(start, end, prev)
+        return GPath(start, end, prev)
       if cell == end:
-        return Path(start, end, end)
+        return GPath(start, end, end)
       prev = cell
       cell = cell.next
     #logging.info("{} {}".format(start.i, start.j))
@@ -82,7 +82,7 @@ class PathGrid:
     raise Exception('A contiguous path between start and end is expected')
 
 
-  def getClosestEntity(self, startPos: Vec2, entities: List[Entity], wall) -> Tuple[Optional[Entity], Optional[Path]]:
+  def getClosestEntity(self, startPos: Vec2, entities: List[Entity], wall) -> Tuple[Optional[Entity], Optional[GPath]]:
     for e in entities:
       p = grid_pos(e.p)
       self.cell(p[0], p[1]).entities.append(e)

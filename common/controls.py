@@ -1,6 +1,7 @@
 import sys
 import json
 import logging
+import numpy as np
 
 from math import atan2, pi
 from threading import Thread, Lock
@@ -12,12 +13,13 @@ from common import reply, Vec2
 from .connection import Connection
 
 from typing import Optional
+from numpy.typing import NDArray
 
 
 pi8 = pi / 8
 
 
-def _get_command(command_set: set[str]):
+def get_command(command_set: set[str]):
   s = ''
   # print(command_set)
   for c in command_set:
@@ -29,6 +31,8 @@ KEYMAP = {
   0: 'j',
   2: 's',
   3: 'c',
+  # 4 share
+  # 4 options
   10: 'z',
   11: 'u',
   12: 'd',
@@ -36,11 +40,15 @@ KEYMAP = {
   14: 'r'
 }
 
+
+
 class Controls:
   def __init__(self, is_human: bool = False):
     self.past: set[str] = set()
     self.curr: set[str] = set()
+    self.pressed_keys: set[int] = set()
     self.lock = Lock()
+    self.freeze_lock = Lock()
     self.is_human = is_human
 
     if is_human:
@@ -56,21 +64,23 @@ class Controls:
         logging.info('Joystick removed {}'.format(joy))
 
       def key_received(key: Key):
+        self.freeze_lock.acquire()
         self.lock.acquire()
         try:
           if key.keytype == Key.AXIS:
             return
-          # logging.info('Key: {}'.format(key.value))
-          if key.number not in KEYMAP:
-            return
-          keynum = KEYMAP[key.number]
+          # logging.info('Key: %s %s', key.number, key.value)
           if key.value:
-            self.curr.add(keynum)
+            self.pressed_keys.add(key.number)
+            if key.number in KEYMAP:
+              self.curr.add(KEYMAP[key.number])
           else:
-            if keynum not in self.curr:
-              return
-            self.curr.remove(keynum)
+            self.pressed_keys.discard(key.number)
+            if key.number in KEYMAP:
+              self.curr.discard(KEYMAP[key.number])
+
         finally:
+          self.freeze_lock.release()
           self.lock.release()
 
       def listen_joystick():
@@ -78,6 +88,16 @@ class Controls:
         run_event_loop(print_add, print_remove, key_received, alive)
 
       self.thr = Thread(target=listen_joystick).start()
+
+
+  def parse_command(self, command: str):
+    self._swap()
+    for c in command:
+      self.curr.add(c)
+
+
+  def freeze(self):
+    self.freeze_lock.acquire()
 
 
   def stop(self):
@@ -112,6 +132,38 @@ class Controls:
   def down(self):
     self.curr.add('d')
 
+  def direction(self) -> NDArray:
+    return np.array([self.hor(), self.ver()])
+
+  def hor(self) -> float:
+    if 'l' in self.curr and 'r' not in self.curr:
+      return -1
+    if 'r' in self.curr and 'l' not in self.curr:
+      return 1
+    return 0
+
+  def ver(self) -> float:
+    if 'd' in self.curr and 'u' not in self.curr:
+      return -1
+    if 'u' in self.curr and 'd' not in self.curr:
+      return 1
+    return 0
+
+  def key_state(self, k) -> NDArray:
+    return np.array([
+      1 if k in self.curr else 0,
+      1 if k in self.past else 0
+    ])
+
+  def jump_state(self) -> NDArray:
+    return self.key_state('j')
+
+  def dash_state(self) -> NDArray:
+    return self.key_state('z')
+
+  def shoot_state(self) -> NDArray:
+    return self.key_state('s')
+
   def aim(self, dir: Vec2):
     a = atan2(dir.y, dir.x)
     if a < -5*pi8 or a > 5*pi8:
@@ -123,6 +175,9 @@ class Controls:
     if a > pi8 and a < 7*pi8:
       self.up()
 
+  def get_command(self):
+    return get_command(self.curr)
+
   def _swap(self):
     aux = self.curr
     self.curr = self.past
@@ -131,7 +186,7 @@ class Controls:
   def _msg(self) -> str:
     msg = json.dumps({
       'type': 'command',
-      'command': _get_command(self.curr)
+      'command': get_command(self.curr)
     })
     return msg
 
@@ -147,4 +202,5 @@ class Controls:
         self._swap()
         self.curr.clear()
     finally:
+      self.freeze_lock.release()
       self.lock.release()

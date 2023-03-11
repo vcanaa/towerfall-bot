@@ -1,9 +1,12 @@
 from __future__ import annotations
 
 import sys
+import numpy as np
 
-from typing import Any, List
 from math import sqrt
+
+from typing import Any, List, Tuple
+from numpy.typing import NDArray
 
 
 class Entity:
@@ -18,7 +21,6 @@ class Entity:
 
   def __getitem__(self, key):
     return self.e[key]
-
 
   def topLeft(self) -> Vec2:
     return Vec2(self.p.x - self.s.x / 2, self.p.y - self.s.y / 2)
@@ -35,7 +37,26 @@ class Vec2:
 
 
   def __str__(self):
-    return '({}, {})'.format(self.x, self.y)
+    return 'Vec2({}, {})'.format(self.x, self.y)
+
+  def __hash__(self):
+    return hash((self.x, self.y))
+
+  def __eq__(self, other):
+    if isinstance(other, Vec2):
+      if self.x != other.x:
+        return False
+      if self.y != other.y:
+        return False
+      return True
+    return NotImplemented
+
+  def tupleint(self) -> Tuple[int, int]:
+    return int(self.x), int(self.y)
+
+
+  def array(self) -> NDArray:
+    return np.array([self.x, self.y])
 
 
   def set_length(self, l: float):

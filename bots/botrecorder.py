@@ -15,6 +15,8 @@ from typing import Any, List, Tuple
 HOST = "127.0.0.1"
 PORT = 12024
 
+REPLAY_NAME = 'only_side_modes'
+
 class BotRecorder(Bot):
   def __init__(self):
     super(BotRecorder, self).__init__()
@@ -37,7 +39,7 @@ class BotRecorder(Bot):
   def run(self):
     try:
       self.connection.read()
-      self.connection.write_instruction('config')
+      self.send_reset_instruction()
       while True:
         self.update()
     finally:
@@ -52,11 +54,14 @@ class BotRecorder(Bot):
     self.control.stop()
 
 
+  def send_reset_instruction(self):
+    self.connection.write_instruction('config', pos={'x': 160, 'y': 100})
+    self.should_reset = False
+
   def update(self):
     game_state = json.loads(self.connection.read())
     if self.should_reset:
-      self.connection.write_instruction('config')
-      self.should_reset = False
+      self.send_reset_instruction()
       return
 
     if game_state['type'] == 'init':
@@ -72,7 +77,7 @@ class BotRecorder(Bot):
   def handle_init(self, state: dict):
     logging.info("handle_init")
     if hasattr(self, 'replay'):
-      dir_path = Path(os.path.join('replays', 'only_side_moves'))
+      dir_path = Path(os.path.join('replays', REPLAY_NAME))
       dir_path.mkdir(parents=True, exist_ok=True)
       file_name: str = '{}.json'.format(time.time_ns()//100000000)
       self.replay.save(os.path.join(dir_path, file_name))
@@ -107,9 +112,8 @@ class BotRecorder(Bot):
       self.getPlayer(self.entities)
       self.gv.update(self.entities, self.me)
 
-      if 6 in self.control.pressed_keys:
-        self.connection.write_instruction('config')
-        self.should_reset = False
+      if self.control.consume_key_up_event(6):
+        self.send_reset_instruction()
         return
 
       self.control.freeze()

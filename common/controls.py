@@ -46,6 +46,7 @@ class Controls:
   def __init__(self, is_human: bool = False):
     self.past: set[str] = set()
     self.curr: set[str] = set()
+    self.key_up_event: set[int] = set()
     self.pressed_keys: set[int] = set()
     self.lock = Lock()
     self.freeze_lock = Lock()
@@ -75,6 +76,8 @@ class Controls:
             if key.number in KEYMAP:
               self.curr.add(KEYMAP[key.number])
           else:
+            if key.number in self.pressed_keys:
+              self.key_up_event.add(key.number)
             self.pressed_keys.discard(key.number)
             if key.number in KEYMAP:
               self.curr.discard(KEYMAP[key.number])
@@ -90,8 +93,16 @@ class Controls:
       self.thr = Thread(target=listen_joystick).start()
 
 
+  def consume_key_up_event(self, key_number: int) -> bool:
+    r = False
+    if key_number in self.key_up_event:
+      r = True
+      self.key_up_event.remove(key_number)
+    return r
+
   def parse_command(self, command: str):
     self._swap()
+    self.curr.clear()
     for c in command:
       self.curr.add(c)
 
@@ -136,18 +147,20 @@ class Controls:
     return np.array([self.hor(), self.ver()])
 
   def hor(self) -> float:
-    if 'l' in self.curr and 'r' not in self.curr:
-      return -1
-    if 'r' in self.curr and 'l' not in self.curr:
-      return 1
-    return 0
+    r = 0
+    if 'l' in self.curr:
+      r -= 1
+    if 'r' in self.curr:
+      r += 1
+    return r
 
   def ver(self) -> float:
-    if 'd' in self.curr and 'u' not in self.curr:
-      return -1
-    if 'u' in self.curr and 'd' not in self.curr:
-      return 1
-    return 0
+    r = 0
+    if 'd' in self.curr:
+      r -= 1
+    if 'u' in self.curr:
+      r += 1
+    return r
 
   def key_state(self, k) -> NDArray:
     return np.array([

@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 
 from numpy.typing import NDArray
 
-from .common import WIDTH, HEIGHT, Entity, bounded
+from .common import WIDTH, HEIGHT, Entity, bounded, Vec2, grid_pos
 
 from typing import List, Tuple, Union
 
@@ -82,6 +82,27 @@ class GridView():
     # logging.info('obs_grid: {}'.format(self.obs_grid.shape))
     # self._plot_grid(self.obs_grid, 'obs_grid')
     # print(self.obs_grid)
+
+  def ray(self, pos: Vec2, step: Vec2, max: float) -> float:
+    p = pos.copy()
+    dist = float('-inf')
+    for i in range(int(max) // self.csize + 1):
+      p.add(step)
+      i, j = grid_pos(p, self.csize)
+      if self.fixed_grid10[i, j]:
+        if step.x > 0:
+          dist = (int(p.x) // self.csize) * self.csize - pos.x
+          break
+        if step.x < 0:
+          dist = pos.x + (int(p.x) // self.csize + 1) * self.csize
+          break
+        if step.y > 0:
+          dist = (int(p.y) // self.csize) * self.csize - pos.y
+          break
+        if step.y < 0:
+          dist = pos.y + (int(p.y) // self.csize + 1) * self.csize
+          break
+    return min(max, dist)
 
 
   def view_length(self, sight: Union[int, Tuple[int, int]]) -> Tuple[int, int]:

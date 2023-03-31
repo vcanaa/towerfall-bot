@@ -1,5 +1,4 @@
 import json
-import logging
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -16,6 +15,8 @@ from .grid import GridView
 
 BUTTONS = ['u', 'd', 'l', 'r', 'j', 'z']
 
+
+# I dont quite remember the state of this
 
 class EnvWrap(Env):
   def __init__(self, grid_factor: int, sight: int, connection: Connection):

@@ -51,9 +51,10 @@ def bounded(v, left, right):
   return v
 
 
-def grid_pos(p: Vec2, cell_size: int) -> Tuple[int, int]:
-  return (int(p.x % WIDTH) // cell_size, int(p.y % HEIGHT) // cell_size)
-
+def grid_pos(p: Vec2, cell_size: int, cap=True) -> Tuple[int, int]:
+  if cap:
+    return (int(p.x % WIDTH) // cell_size, int(p.y % HEIGHT) // cell_size)
+  return (int(p.x) // cell_size, int(p.y) // cell_size)
 
 def is_clean_path(p1: Vec2, p2: Vec2, grid: NDArray, cell_size: int) -> bool:
   dp = diff(p2, p1)

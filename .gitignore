@@ -5,8 +5,9 @@ config.json
 
 data/
 ignore/
-logs.txt
+logs/
 models/
 models/
 replays/
 runs/
+tensorboard/

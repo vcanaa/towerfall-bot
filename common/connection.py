@@ -1,6 +1,8 @@
 import socket
 import json
 
+import logging
+
 from typing import Optional
 
 _BYTE_ORDER = 'big'
@@ -35,8 +37,11 @@ class Connection:
       'type': type,
       'command': command
     }
+
     if pos:
       resp['pos'] = pos
+    logging.info('pos: %s', pos)
+    logging.info(resp)
     self.write(json.dumps(resp))
 
   def write_reset(self, pos: Optional[dict] = None):

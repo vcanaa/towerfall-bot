@@ -1,17 +1,18 @@
 import os
 
-from common import Connection, EnvWrap
+from common import Connection
+from envs import EnvMovement
 
 from stable_baselines3.common.env_checker import check_env
 
 # from stable_baselines3.dqn import DQN
 from stable_baselines3.ppo import PPO
 
-connection = Connection('127.0.0.1', 9000)
-env = EnvWrap(grid_factor=4, sight=50, connection=connection)
-# check_env(env)
+connection = Connection('127.0.0.1', 12024)
+env = EnvMovement(grid_factor=2, sight=50, connection=connection)
+check_env(env)
 
-model_path = 'models/test.model'
+model_path = 'rl_models/test.model'
 
 if os.path.exists(model_path):
   model = PPO.load(model_path)
@@ -25,4 +26,4 @@ else:
 
 while True:
   model.learn(total_timesteps=1000)
-  model.save('test')
+  model.save(model_path)

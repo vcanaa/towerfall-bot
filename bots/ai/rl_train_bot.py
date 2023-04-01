@@ -1,6 +1,8 @@
 import sys
+
+from envs import gym_wrap
 sys.path.insert(0, '../..')
-from common import gym_wrap, Connection
+from common import Connection
 
 import gym
 

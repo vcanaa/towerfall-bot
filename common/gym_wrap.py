@@ -22,7 +22,7 @@ class EnvWrap(Env):
   def __init__(self, grid_factor: int, sight: int, connection: Connection):
     self.gv = GridView(grid_factor)
     self.sight = sight
-    n = self.gv.view_length(sight)
+    n, _ = self.gv.view_length(sight)
     self.obs: dict[str,object]
     self.rew: float
     # self.action_space = spaces.MultiBinary(len(BUTTONS))
@@ -63,6 +63,8 @@ class EnvWrap(Env):
     assert game_state['type'] == 'update'
     self._handle_update(game_state)
     # logging.info('entities: {}'.format(len(self.entities)))
+
+    # TODO
     self._set_new_target()
     displ = self._get_target_displ()
     self.obs_target: NDArray = np.array([displ.x, displ.y], dtype=np.int8)
@@ -141,7 +143,7 @@ class EnvWrap(Env):
       # logging.info('(x, y): ({} {})'.format(x, y))
       i, j = grid_pos(Vec2(x, y), self.gv.csize)
       # logging.info('(i, j): ({} {})'.format(i, j))
-      if not self.gv.fixed_grid[i][j]:
+      if not self.gv.fixed_grid10[i][j]:
         break
     self.target = Entity(e = {
       'pos': {'x': x, 'y': y},

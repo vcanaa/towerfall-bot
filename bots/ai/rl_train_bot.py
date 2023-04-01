@@ -13,21 +13,22 @@ _PORT = 12024
 
 connection = Connection(_HOST, _PORT)
 
-pr
 
-env = gym_wrap.EnvWrap(1, 50, None)
+env = gym_wrap.EnvWrap(1, 100, connection=connection)
 # Parallel environments
 # env = make_vec_env("CartPole-v1", n_envs=4)
 
-model = PPO("MlpPolicy", env, verbose=1)
+# model = PPO("MlpPolicy", env, verbose=1)
 # model.learn(total_timesteps=25000)
 
 # model.save("ppo_cartpole")
 # del model # remove to demonstrate saving and loading
 # model = PPO.load("ppo_cartpole")
 
+print('Starting to play')
 obs = env.reset()
 while True:
+    print('Obs:', obs)
     # action, _states = model.predict(obs)
     action = env.action_space.sample()
     obs, rewards, dones, info = env.step(action)

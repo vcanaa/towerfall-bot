@@ -30,9 +30,8 @@ class Bot():
   def get_entities(self):
     return []
 
-  def get_game_screen(self) -> NDArray[np.uint8]:
+  def get_game_screen(self, get_data_fn): # -> NDArray[np.uint8]:
     self.update_lock.acquire()
-    screen_data = np.frombuffer(self.shm.buf, dtype=np.uint8)
+    get_data_fn(self.shm.buf)
     self.update_lock.release()
-    screen_data = screen_data.reshape(HEIGHT, WIDTH, _CHANNELS)
-    return screen_data
+

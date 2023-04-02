@@ -167,6 +167,7 @@ class BotUI(Thread):
     while True:
       if self.is_paused:
         return
+      # self.screen_viewer.update()
       self.bot.update()
       if self.bot.is_paused:
         self.pause()

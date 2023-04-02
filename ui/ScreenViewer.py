@@ -18,15 +18,10 @@ class ScreenViewer:
         image=None)
 
   def update(self):
-    screen_data = self.bot.get_game_screen()
-
-    # a = screen_data.reshape(240, 320, 4)
-    # a = np.roll(a, int(160 - self.bot.me.e['pos']['x']), axis=1)
-    # a = np.roll(a, int(120 + self.bot.me.e['pos']['y']), axis=0)
-    new_shape = (screen_data.shape[1]*self.scale,
-        screen_data.shape[0]*self.scale)
-    self.img = ImageTk.PhotoImage(
-        image=Image.fromarray(screen_data, mode='RGBA').resize(
-            new_shape,
-            Image.Resampling.NEAREST))
+    image: Image.Image
+    def get_data(mv):
+      nonlocal image
+      image = Image.frombytes(data=mv.tobytes(), size=(320, 240),  mode='RGBA')
+    self.bot.get_game_screen(get_data)
+    self.img = ImageTk.PhotoImage(image=image.resize((640, 480),Image.Resampling.NEAREST))
     self.canvas.itemconfig(self.image_screen, image = self.img)

@@ -116,10 +116,10 @@ class GridView():
     if not sight:
       return WIDTH // 2 // self.gf, HEIGHT // 2 // self.gf
     if isinstance(sight, int):
-      m = n = min(sight // self.gf, self.shifted_grid.shape[1] // 2)
+      m = n = min(sight // self.gf, HEIGHT // 2 // self.gf )
     else:
-      m = min(sight[0] // self.gf, self.shifted_grid.shape[0] // 2)
-      n = min(sight[1] // self.gf, self.shifted_grid.shape[1] // 2)
+      m = min(sight[0] // self.gf, WIDTH // 2 // self.gf)
+      n = min(sight[1] // self.gf, HEIGHT // 2 // self.gf)
     return m, n
 
 

@@ -1,47 +1,56 @@
 import logging
 import numpy as np
+import random
 
 from gym import spaces
 
-from common import Connection, GridView, Vec2, Entity, to_entities, rand_double_region, grid_pos
+from common import Connection, GridView, Vec2, Entity, to_entities, rand_double_region, grid_pos, WIDTH, HEIGHT
 
 from .gym_wrapper import TowerFallEnvWrapper
 
 from numpy.typing import NDArray
 from typing import Tuple
 
-class TowerFallMovementEnv(TowerFallEnvWrapper):
-  def __init__(self, grid_factor: int, sight: int, connection: Connection):
-    """A gym environment for TowerFall Ascension.
-    Args:
-    TODO: """
+HW = WIDTH // 2
+HH = HEIGHT // 2
 
-    super(TowerFallMovementEnv, self).__init__(connection)
+class TowerfallMovementExpertEnv(TowerFallEnvWrapper):
+  '''In each episode of this environment, the agent has to move from point A to point B.
+  For every frame positive reward is given for getting closer to target and negative reward is given for distantiating from target.
+  When reaching the target, agent receives a bigger bounty.'''
+  def __init__(self, connection: Connection, grid_factor: int, bounty=50, episode_max_len: int=60*5):
+    super(TowerfallMovementExpertEnv, self).__init__(connection)
     self.gv = GridView(grid_factor)
-    self.sight = sight
-    n, _ = self.gv.view_sight_length(sight)
+    m, n = self.gv.view_sight_length(None)
+    self.episode_max_len = episode_max_len
+    self.bounty = bounty
+    # logging.info('m, n: %s, %s', m, n)
     self.obs: dict[str,object]
     self.rew: float
     self.draws = []
-    self.action_space = spaces.Box(
-      low=np.array([-1, -1, 0, 0]),
-      high=np.array([1, 1, 1, 1]),
-      shape=(4,),
-      dtype=np.int8)
+    # hor, ver, jump, dash
+    self.action_space = spaces.MultiDiscrete([3, 3, 2, 2])
     self.observation_space = spaces.Dict({
-        'grid': spaces.MultiBinary((2*n, 2*n)),
-        'target': spaces.Box(low=-2*n, high = 2*n, shape=(2,), dtype=np.int8)
+        'dodgeCooldown': spaces.Discrete(2),
+        'dodging': spaces.Discrete(2),
+        'facing': spaces.Discrete(2),
+        'grid': spaces.MultiBinary((2*m, 2*n)),
+        'onGround': spaces.Discrete(2),
+        'onWall': spaces.Discrete(2),
+        'target': spaces.Box(low=-1, high=1, shape=(2,), dtype=np.float32),
+        'vel': spaces.Box(low=-2, high=2, shape=(2,), dtype=np.float32),
     })
+    logging.info(str(self.observation_space))
 
   def _actions_to_command(self, actions: NDArray) -> str:
     command = ''
-    if actions[0] == -1:
+    if actions[0] == 0:
       command += 'l'
-    elif actions[0] == 1:
+    elif actions[0] == 2:
       command += 'r'
-    if actions[1] == -1:
+    if actions[1] == 0:
       command += 'd'
-    elif actions[1] == 1:
+    elif actions[1] == 2:
       command += 'u'
     if actions[2] == 1:
       command += 'j'
@@ -49,9 +58,7 @@ class TowerFallMovementEnv(TowerFallEnvWrapper):
       command += 'z'
     return command
 
-  def _handle_reset(self,
-                    state_scenario: dict,
-                    state_update: dict) -> dict:
+  def _handle_reset(self, state_scenario: dict, state_update: dict) -> dict:
     self.gv.set_scenario(state_scenario)
     self.entities = to_entities(state_update['entities'])
     self.me = self._get_own_archer(self.entities)
@@ -59,19 +66,18 @@ class TowerFallMovementEnv(TowerFallEnvWrapper):
 
     self._set_new_target()
     displ = self._get_target_displ()
-    self.obs_target: NDArray = np.array([displ.x, displ.y], dtype=np.int8)
+    self.obs_target: NDArray = np.array([displ.x / HW, displ.y / HH], dtype=np.int8)
     self.done = False
-    return {
-      'grid': self.obs_grid,
-      'target': self.obs_target
-    }
+    self.episode_len = 0
+    return self._get_obs()
 
   def _handle_step(self, state_update: dict) -> Tuple[object, float, bool, object]:
     self.entities = to_entities(state_update['entities'])
     self.me = self._get_own_archer(self.entities)
-    self._update_obs_grid
+    self._update_obs_grid()
     self._update_reward()
     self.draws.clear()
+    self.episode_len += 1
     assert self.me
     self.draws.append({
       'type': 'line',
@@ -81,10 +87,20 @@ class TowerFallMovementEnv(TowerFallEnvWrapper):
       'thick': 4
     })
 
+    return self._get_obs(), self.rew, self.done, {}
+
+  def _get_obs(self):
+    assert self.me
     return {
+      'dodgeCooldown': int(self.me['dodgeCooldown']),
+      'dodging': int(self.me['state']=='dodging'),
+      'facing': (self.me['facing'] + 1) // 2, # -1,1 -> 0,1
       'grid': self.obs_grid,
-      'target': self.obs_target
-    }, self.rew, self.done, {}
+      'onGround': int(self.me['onGround']),
+      'onWall': int(self.me['onWall']),
+      'target': self.obs_target,
+      'vel': self.me.v.array() / 5
+    }
 
   def _update_reward(self):
     assert self.me
@@ -93,34 +109,32 @@ class TowerFallMovementEnv(TowerFallEnvWrapper):
     self.rew = self.prev_disp_len - disp_len
     if disp_len < self.me.s.y / 2:
       # Reached target. Gets big reward
-      self.rew += self.bonus_rew
+      self.rew += self.bounty
       self.done = True
       logging.info('Done. Reached target.')
-    if abs(displ.x) > self.sight or abs(displ.y) > self.sight:
-      # Target considered out of reach. Fail
+    if self.episode_len > self.episode_max_len:
       self.done = True
-      logging.info('Done. Target out of reach. {} {} {}'.format(self.target.p, self.me.p, displ))
+      logging.info('Done. Timeout.')
     self.prev_disp_len = disp_len
-    self.obs_target: NDArray = np.array([displ.x, displ.y], dtype=np.int8)
+    self.obs_target: NDArray = np.array([displ.x / HW, displ.y / HH], dtype=np.float32)
     if self.done:
       self._set_new_target()
 
   def _update_obs_grid(self):
     assert self.me
     self.gv.update(self.entities, self.me)
-    self.obs_grid = self.gv.view(self.sight)
+    self.obs_grid = self.gv.view(None)
 
   def _set_new_target(self):
     assert self.me
     while True:
-      x = self.me.p.x + rand_double_region(0.5*self.sight, self.sight)
-      # y = self.me.p.y + rand_double_region(0.5*self.sight, self.sight)
-      y = self.me.p.y
-      # logging.info('(x, y): ({} {})'.format(x, y))
+      x = random.randint(0, WIDTH)
+      y = random.randint(0, HEIGHT)
       i, j = grid_pos(Vec2(x, y), self.gv.csize)
       # logging.info('(i, j): ({} {})'.format(i, j))
       if not self.gv.fixed_grid10[i][j]:
         break
+    # logging.info('New target: (x, y): ({} {})'.format(x, y))
     self.target = Entity(e = {
       'pos': {'x': x, 'y': y},
       'vel': {'x': 0, 'y': 0},
@@ -130,7 +144,6 @@ class TowerFallMovementEnv(TowerFallEnvWrapper):
     })
     # New target is only used in the next loop.
     self.prev_disp_len = self._get_target_displ().length()
-    self.bonus_rew = self.prev_disp_len
 
   def _get_target_displ(self):
     '''Gets the displacement of of the target from the player.'''

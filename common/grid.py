@@ -7,7 +7,7 @@ from numpy.typing import NDArray
 
 from .common import WIDTH, HEIGHT, Entity, bounded, Vec2, grid_pos
 
-from typing import List, Tuple, Union
+from typing import List, Tuple, Union, Optional
 
 
 def plot_grid(grid: NDArray, name: str):
@@ -56,6 +56,9 @@ def fill_grid(e: Entity, grid: NDArray, shouldLog = False):
 
 
 class GridView():
+  '''This is a representation of the scenario to show what parts of the screen are empty or occupied.
+  It is capable of adjusting the resolution of the occupation matrix and recentering at different positions.'''
+
   def __init__(self, grid_factor: int):
     self.gf: int = grid_factor
 
@@ -72,8 +75,10 @@ class GridView():
 
 
   def update(self, entities: List[Entity], me: Entity):
+    '''To be called every frame to fill the empty spaces with the entities.'''
     self.grid = self.fixed_grid.copy()
     for e in entities:
+      # TODO Add more entities to this
       if e.type == 'crackedWall':
         fill_grid(e, self.grid)
     # self._plot_grid(a, 'a')
@@ -84,6 +89,7 @@ class GridView():
     # print(self.obs_grid)
 
   def ray(self, pos: Vec2, step: Vec2, max: float) -> float:
+    # This is not tested
     p = pos.copy()
     dist = float('-inf')
     for i in range(int(max) // self.csize + 1):
@@ -105,19 +111,25 @@ class GridView():
     return min(max, dist)
 
 
-  def view_length(self, sight: Union[int, Tuple[int, int]]) -> Tuple[int, int]:
+  def view_sight_length(self, sight: Optional[Union[int, Tuple[int, int]]]) -> Tuple[int, int]:
+    '''Gets the length of view using the specified sight.'''
+    if not sight:
+      return WIDTH // 2 // self.gf, HEIGHT // 2 // self.gf
     if isinstance(sight, int):
-      m = n = sight // self.gf
+      m = n = min(sight // self.gf, self.shifted_grid.shape[1] // 2)
     else:
-      m = sight[0] // self.gf
-      n = sight[1] // self.gf
+      m = min(sight[0] // self.gf, self.shifted_grid.shape[0] // 2)
+      n = min(sight[1] // self.gf, self.shifted_grid.shape[1] // 2)
     return m, n
 
 
-  def view(self, sight: Union[int, Tuple[int, int]]):
-    m, n = self.view_length(sight)
+  def view(self, sight: Optional[Union[int, Tuple[int, int]]]):
+    '''Gets a view of the grid using the specified sight'''
+    if not sight:
+      return self.shifted_grid
+    m, n = self.view_sight_length(sight)
     W, H = self.fixed_grid.shape
     return self.shifted_grid[
-      W // 2 - m: W // 2 + m,
-      H // 2 - n: H // 2 + n,]
+        W // 2 - m: W // 2 + m,
+        H // 2 - n: H // 2 + n]
 

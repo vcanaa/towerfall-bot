@@ -56,7 +56,7 @@ class Vec2:
 
 
   def array(self) -> NDArray:
-    return np.array([self.x, self.y])
+    return np.array([self.x, self.y], dtype=np.float32)
 
 
   def set_length(self, l: float):

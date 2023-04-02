@@ -29,6 +29,10 @@ class EnvWrap(Env, ABC):
     '''Hook for a gym step call.'''
     raise NotImplementedError
 
+  @abstractmethod
+  def _get_draws(self) -> list[dict]:
+    raise NotImplementedError
+
   def reset(self) -> Tuple[object, float, bool, object]:
     '''Gym reset'''
     self.connection.write_instruction('config', pos={'x': 160, 'y': 80})
@@ -53,7 +57,8 @@ class EnvWrap(Env, ABC):
 
     self.connection.write(json.dumps({
       'type': 'command',
-      'command': command
+      'command': command,
+      'draws': self._get_draws()
     }))
     state_update = self._read_game_state()
     assert state_update['type'] == 'update'

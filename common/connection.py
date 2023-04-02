@@ -40,8 +40,8 @@ class Connection:
 
     if pos:
       resp['pos'] = pos
-    logging.info('pos: %s', pos)
-    logging.info(resp)
+    # logging.info('pos: %s', pos)
+    # logging.info(resp)
     self.write(json.dumps(resp))
 
   def write_reset(self, pos: Optional[dict] = None):

@@ -18,6 +18,7 @@ class EnvMovement(EnvWrap):
     n, _ = self.gv.view_length(sight)
     self.obs: dict[str,object]
     self.rew: float
+    self.draws = []
     self.action_space = spaces.Box(
       low=np.array([-1, -1, 0, 0]),
       high=np.array([1, 1, 1, 1]),
@@ -66,6 +67,16 @@ class EnvMovement(EnvWrap):
     self.me = self._get_own_archer(self.entities)
     self._update_obs_grid
     self._update_reward()
+    self.draws.clear()
+    assert self.me
+    self.draws.append({
+      'type': 'line',
+      'start': self.me['pos'],
+      'end': self.target['pos'],
+      'color': [1,1,1],
+      'thick': 4
+    })
+
     return {
       'grid': self.obs_grid,
       'target': self.obs_target
@@ -76,7 +87,7 @@ class EnvMovement(EnvWrap):
     displ = self._get_target_displ()
     disp_len = displ.length()
     self.rew = self.prev_disp_len - disp_len
-    if disp_len < 2:
+    if disp_len < self.me.s.y / 2:
       # Reached target. Gets big reward
       self.rew += self.bonus_rew
       self.done = True
@@ -99,7 +110,8 @@ class EnvMovement(EnvWrap):
     assert self.me
     while True:
       x = self.me.p.x + rand_double_region(0.5*self.sight, self.sight)
-      y = self.me.p.y + rand_double_region(0.5*self.sight, self.sight)
+      # y = self.me.p.y + rand_double_region(0.5*self.sight, self.sight)
+      y = self.me.p.y
       # logging.info('(x, y): ({} {})'.format(x, y))
       i, j = grid_pos(Vec2(x, y), self.gv.csize)
       # logging.info('(i, j): ({} {})'.format(i, j))
@@ -122,3 +134,6 @@ class EnvMovement(EnvWrap):
     displ = self.target.p.copy()
     displ.sub(self.me.p)
     return displ
+
+  def _get_draws(self) -> list[dict]:
+    return self.draws

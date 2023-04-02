@@ -95,11 +95,11 @@ class TowerFallMovementEnv(TowerFallEnvWrapper):
       # Reached target. Gets big reward
       self.rew += self.bonus_rew
       self.done = True
-      logging.info('Done. Reached target.')
+      logging.debug('Done. Reached target.')
     if abs(displ.x) > self.sight or abs(displ.y) > self.sight:
       # Target considered out of reach. Fail
       self.done = True
-      logging.info('Done. Target out of reach. {} {} {}'.format(self.target.p, self.me.p, displ))
+      logging.debug('Done. Target out of reach. {} {} {}'.format(self.target.p, self.me.p, displ))
     self.prev_disp_len = disp_len
     self.obs_target: NDArray = np.array([displ.x, displ.y], dtype=np.int8)
     if self.done:

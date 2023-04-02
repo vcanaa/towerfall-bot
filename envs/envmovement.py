@@ -5,14 +5,18 @@ from gym import spaces
 
 from common import Connection, GridView, Vec2, Entity, to_entities, rand_double_region, grid_pos
 
-from .gym_wrap import EnvWrap
+from .gym_wrapper import TowerFallEnvWrapper
 
 from numpy.typing import NDArray
 from typing import Tuple
 
-class EnvMovement(EnvWrap):
+class TowerFallMovementEnv(TowerFallEnvWrapper):
   def __init__(self, grid_factor: int, sight: int, connection: Connection):
-    super(EnvMovement, self).__init__(connection)
+    """A gym environment for TowerFall Ascension.
+    Args:
+    TODO: """
+
+    super(TowerFallMovementEnv, self).__init__(connection)
     self.gv = GridView(grid_factor)
     self.sight = sight
     n, _ = self.gv.view_length(sight)

@@ -2,7 +2,7 @@ import os
 import logging
 
 from common import Connection
-from envs import EnvMovement
+from envs import TowerFallMovementEnv
 
 from stable_baselines3.common.env_checker import check_env
 
@@ -17,7 +17,7 @@ logging.basicConfig(level=logging.INFO)
 logging.getLogger().handlers[0].setFormatter(NoLevelFormatter())
 
 connection = Connection('127.0.0.1', 12024)
-env = EnvMovement(grid_factor=2, sight=50, connection=connection)
+env = TowerFallMovementEnv(grid_factor=2, sight=50, connection=connection)
 check_env(env)
 
 model_path = 'rl_models/test.model'

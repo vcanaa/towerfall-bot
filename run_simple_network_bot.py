@@ -8,11 +8,8 @@ import time
 
 from common import Connection
 
-# The communication is done over stdin. Every line received is a json. Every message read requires a reply. Example:
-# {
-#   "type": "commands",
-#   "command": "ld"
-# }
+# The communication is done over a TCP connection using the Connection class.
+# via the read() and write() methods.
 
 _HOST = '127.0.0.1'
 _PORT = 12024

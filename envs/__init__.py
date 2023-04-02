@@ -1,2 +1,2 @@
-from .gym_wrap import *
+from .gym_wrapper import *
 from .envmovement import *

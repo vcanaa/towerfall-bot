@@ -1,6 +1,6 @@
 import sys
 
-from envs import gym_wrap
+from envs import TowerFallMovementEnv
 sys.path.insert(0, '../..')
 from common import Connection
 
@@ -16,8 +16,7 @@ _PORT = 12024
 connection = Connection(_HOST, _PORT)
 
 
-env = gym_wrap.EnvWrap(1, 100, connection=connection)
-# Parallel environments
+env = TowerFallMovementEnv(grid_factor=2, sight=50, connection=connection)
 # env = make_vec_env("CartPole-v1", n_envs=4)
 
 # model = PPO("MlpPolicy", env, verbose=1)

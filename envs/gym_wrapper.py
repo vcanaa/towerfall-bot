@@ -9,7 +9,7 @@ from numpy.typing import NDArray
 
 from gym import Env
 
-class EnvWrap(Env, ABC):
+class TowerFallEnvWrapper(Env, ABC):
   def __init__(self, connection: Connection):
     self.connection = connection
     self.connection.read()

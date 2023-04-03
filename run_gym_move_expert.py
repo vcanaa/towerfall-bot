@@ -1,5 +1,6 @@
 import os
 import logging
+import json
 
 from common import Connection
 from envs import TowerfallMovementExpertEnv
@@ -20,17 +21,28 @@ connection = Connection('127.0.0.1', 12024)
 env = TowerfallMovementExpertEnv(grid_factor=5, connection=connection)
 check_env(env)
 
-model_path = 'rl_models/move_exp.model'
 
-# if os.path.exists(model_path):
-#   model = PPO.load(model_path, env=env)
-# else:
-model = PPO(
-  env=env,
-  batch_size=128,
-  policy="MultiInputPolicy",
-  policy_kwargs={'net_arch': [256, 256]},
-  verbose=1)
+model_path = 'rl_models/TowerfallMovementExpertEnv'
+
+def try_load_model(model_path):
+  with open(os.path.join(model_path, 'metadata.json'), 'r') as file:
+    metadata = json.load(file)
+  best_model = None
+  for model in metadata['models']:
+    if not best_model or model['mean_reward'] > best_model['mean_reward']:
+      best_model = model
+  if best_model:
+    return PPO.load
+
+if os.path.exists(model_path):
+  model = PPO.load(model_path, env=env)
+else:
+  model = PPO(
+    env=env,
+    batch_size=128,
+    policy="MultiInputPolicy",
+    policy_kwargs={'net_arch': [256, 256]},
+    verbose=1)
 
 while True:
   model.learn(total_timesteps=100)

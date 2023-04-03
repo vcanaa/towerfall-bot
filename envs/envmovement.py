@@ -6,48 +6,28 @@ from gym import spaces
 from common import Connection, GridView, Vec2, Entity, to_entities, rand_double_region, grid_pos
 
 from .gym_wrapper import TowerFallEnvWrapper
+from .actions import TowerfallActions
 
 from numpy.typing import NDArray
-from typing import Tuple
+from typing import Tuple, Optional
 
 class TowerFallMovementEnv(TowerFallEnvWrapper):
-  def __init__(self, grid_factor: int, sight: int, connection: Connection):
+  def __init__(self, connection: Connection, actions: Optional[TowerfallActions] = None, grid_factor: int = 2, sight: int = 50):
     """A gym environment for TowerFall Ascension.
     Args:
     TODO: """
 
-    super(TowerFallMovementEnv, self).__init__(connection)
+    super(TowerFallMovementEnv, self).__init__(connection, actions)
     self.gv = GridView(grid_factor)
     self.sight = sight
     n, _ = self.gv.view_sight_length(sight)
     self.obs: dict[str,object]
     self.rew: float
     self.draws = []
-    self.action_space = spaces.Box(
-      low=np.array([-1, -1, 0, 0]),
-      high=np.array([1, 1, 1, 1]),
-      shape=(4,),
-      dtype=np.int8)
     self.observation_space = spaces.Dict({
         'grid': spaces.MultiBinary((2*n, 2*n)),
         'target': spaces.Box(low=-2*n, high = 2*n, shape=(2,), dtype=np.int8)
     })
-
-  def _actions_to_command(self, actions: NDArray) -> str:
-    command = ''
-    if actions[0] == -1:
-      command += 'l'
-    elif actions[0] == 1:
-      command += 'r'
-    if actions[1] == -1:
-      command += 'd'
-    elif actions[1] == 1:
-      command += 'u'
-    if actions[2] == 1:
-      command += 'j'
-    if actions[3] == 1:
-      command += 'z'
-    return command
 
   def _handle_reset(self,
                     state_scenario: dict,

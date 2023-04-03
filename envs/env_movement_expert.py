@@ -6,10 +6,11 @@ from gym import spaces
 
 from common import Connection, GridView, Vec2, Entity, to_entities, rand_double_region, grid_pos, WIDTH, HEIGHT
 
-from .gym_wrapper import TowerFallEnvWrapper
+from envs import TowerFallEnvWrapper
+from .actions import TowerfallActions
 
 from numpy.typing import NDArray
-from typing import Tuple
+from typing import Tuple, Optional
 
 HW = WIDTH // 2
 HH = HEIGHT // 2
@@ -18,8 +19,8 @@ class TowerfallMovementExpertEnv(TowerFallEnvWrapper):
   '''In each episode of this environment, the agent has to move from point A to point B.
   For every frame positive reward is given for getting closer to target and negative reward is given for distantiating from target.
   When reaching the target, agent receives a bigger bounty.'''
-  def __init__(self, connection: Connection, grid_factor: int, bounty=50, episode_max_len: int=60*5):
-    super(TowerfallMovementExpertEnv, self).__init__(connection)
+  def __init__(self, connection: Connection, actions: Optional[TowerfallActions] = None, grid_factor: int = 2, bounty=50, episode_max_len: int=60*5):
+    super(TowerfallMovementExpertEnv, self).__init__(connection, actions)
     self.gv = GridView(grid_factor)
     m, n = self.gv.view_sight_length(None)
     self.episode_max_len = episode_max_len
@@ -28,8 +29,6 @@ class TowerfallMovementExpertEnv(TowerFallEnvWrapper):
     self.obs: dict[str,object]
     self.rew: float
     self.draws = []
-    # hor, ver, jump, dash
-    self.action_space = spaces.MultiDiscrete([3, 3, 2, 2])
     self.observation_space = spaces.Dict({
         'dodgeCooldown': spaces.Discrete(2),
         'dodging': spaces.Discrete(2),
@@ -41,22 +40,6 @@ class TowerfallMovementExpertEnv(TowerFallEnvWrapper):
         'vel': spaces.Box(low=-2, high=2, shape=(2,), dtype=np.float32),
     })
     logging.info(str(self.observation_space))
-
-  def _actions_to_command(self, actions: NDArray) -> str:
-    command = ''
-    if actions[0] == 0:
-      command += 'l'
-    elif actions[0] == 2:
-      command += 'r'
-    if actions[1] == 0:
-      command += 'd'
-    elif actions[1] == 2:
-      command += 'u'
-    if actions[2] == 1:
-      command += 'j'
-    if actions[3] == 1:
-      command += 'z'
-    return command
 
   def _handle_reset(self, state_scenario: dict, state_update: dict) -> dict:
     self.gv.set_scenario(state_scenario)

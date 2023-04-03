@@ -1,7 +1,9 @@
 __pycache__
 .ipynb_checkpoints/
 
-config.json
+config*.json
+
+exper_*
 
 data/
 ignore/
@@ -11,3 +13,4 @@ rl_models/
 replays/
 runs/
 tensorboard/
+tmp/

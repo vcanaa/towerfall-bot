@@ -4,20 +4,27 @@ from abc import ABC, abstractmethod
 
 from common import Connection, Entity
 
+from .actions import TowerfallActions
+
 from typing import List, Optional, Tuple
 from numpy.typing import NDArray
 
 from gym import Env
 
 class TowerFallEnvWrapper(Env, ABC):
-  def __init__(self, connection: Connection):
+  def __init__(self, connection: Connection, actions: Optional[TowerfallActions] = None):
     self.connection = connection
+    if actions:
+      self.actions = actions
+    else:
+      self.actions = TowerfallActions()
+    self.action_space = self.actions.action_space
     self.connection.read()
 
-  @abstractmethod
-  def _actions_to_command(self, actions: NDArray) -> str:
-    '''Converts the action array into the commands complying to Towerfall API.'''
-    raise NotImplementedError
+  # @abstractmethod
+  # def _actions_to_command(self, actions: NDArray) -> str:
+  #   '''Converts the action array into the commands complying to Towerfall API.'''
+  #   raise NotImplementedError
 
   @abstractmethod
   def _handle_reset(self, state_scenario: dict, state_update: dict):
@@ -25,7 +32,7 @@ class TowerFallEnvWrapper(Env, ABC):
     raise NotImplementedError
 
   @abstractmethod
-  def _handle_step(self, state_update: dict) -> Tuple[object, float, bool, object]:
+  def _handle_step(self, state_update: dict) -> Tuple[NDArray, float, bool, object]:
     '''Hook for a gym step call.'''
     raise NotImplementedError
 
@@ -33,7 +40,7 @@ class TowerFallEnvWrapper(Env, ABC):
   def _get_draws(self) -> list[dict]:
     raise NotImplementedError
 
-  def reset(self) -> Tuple[object, float, bool, object]:
+  def reset(self) -> Tuple[NDArray, object]:
     '''Gym reset'''
     self.connection.write_instruction('config', pos={'x': 160, 'y': 80})
 
@@ -51,9 +58,9 @@ class TowerFallEnvWrapper(Env, ABC):
     assert state_update['type'] == 'update'
     return self._handle_reset(self.state_scenario, state_update)
 
-  def step(self, actions: NDArray) -> Tuple[object, float, bool, object]:
+  def step(self, actions: NDArray) -> Tuple[NDArray, float, bool, object]:
     '''Gym step'''
-    command = self._actions_to_command(actions)
+    command = self.actions._actions_to_command(actions)
 
     self.connection.write(json.dumps({
       'type': 'command',

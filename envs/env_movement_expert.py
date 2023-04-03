@@ -6,7 +6,7 @@ from gym import spaces
 
 from common import Connection, GridView, Vec2, Entity, to_entities, rand_double_region, grid_pos, WIDTH, HEIGHT
 
-from envs import TowerFallEnvWrapper
+from .gym_wrapper import TowerFallEnvWrapper
 from .actions import TowerfallActions
 
 from numpy.typing import NDArray

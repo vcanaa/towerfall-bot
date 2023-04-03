@@ -21,11 +21,6 @@ class TowerFallEnvWrapper(Env, ABC):
     self.action_space = self.actions.action_space
     self.connection.read()
 
-  # @abstractmethod
-  # def _actions_to_command(self, actions: NDArray) -> str:
-  #   '''Converts the action array into the commands complying to Towerfall API.'''
-  #   raise NotImplementedError
-
   @abstractmethod
   def _handle_reset(self, state_scenario: dict, state_update: dict):
     '''Hook for a gym reset call.'''

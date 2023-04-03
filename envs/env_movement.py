@@ -23,7 +23,6 @@ class TowerFallMovementEnv(TowerFallEnvWrapper):
     n, _ = self.gv.view_sight_length(sight)
     self.obs: dict[str,object]
     self.rew: float
-    self.draws = []
     self.observation_space = spaces.Dict({
         'grid': spaces.MultiBinary((2*n, 2*n)),
         'target': spaces.Box(low=-2*n, high = 2*n, shape=(2,), dtype=np.int8)
@@ -51,9 +50,8 @@ class TowerFallMovementEnv(TowerFallEnvWrapper):
     self.me = self._get_own_archer(self.entities)
     self._update_obs_grid
     self._update_reward()
-    self.draws.clear()
     assert self.me
-    self.draws.append({
+    self._draws({
       'type': 'line',
       'start': self.me['pos'],
       'end': self.target['pos'],
@@ -118,6 +116,3 @@ class TowerFallMovementEnv(TowerFallEnvWrapper):
     displ = self.target.p.copy()
     displ.sub(self.me.p)
     return displ
-
-  def _get_draws(self) -> list[dict]:
-    return self.draws

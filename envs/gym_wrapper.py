@@ -19,6 +19,7 @@ class TowerFallEnvWrapper(Env, ABC):
     else:
       self.actions = TowerfallActions()
     self.action_space = self.actions.action_space
+    self._draw_elems = []
     self.connection.read()
 
   @abstractmethod
@@ -31,9 +32,8 @@ class TowerFallEnvWrapper(Env, ABC):
     '''Hook for a gym step call.'''
     raise NotImplementedError
 
-  @abstractmethod
-  def _get_draws(self) -> list[dict]:
-    raise NotImplementedError
+  def _draws(self, draw_elem):
+    self._draw_elems.append(draw_elem)
 
   def reset(self) -> Tuple[NDArray, object]:
     '''Gym reset'''
@@ -57,11 +57,14 @@ class TowerFallEnvWrapper(Env, ABC):
     '''Gym step'''
     command = self.actions._actions_to_command(actions)
 
-    self.connection.write(json.dumps({
+    resp: dict[str, object] = {
       'type': 'command',
       'command': command,
-      'draws': self._get_draws()
-    }))
+    }
+    if self._draw_elems:
+      resp['draws'] = self._draw_elems
+    self.connection.write(json.dumps(resp))
+    self._draw_elems.clear()
     state_update = self._read_game_state()
     assert state_update['type'] == 'update'
     return self._handle_step(state_update)

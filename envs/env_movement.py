@@ -49,14 +49,14 @@ class TowerfallMovementEnv(TowerfallEnv):
       'target': self.obs_target
     }
     assert self.me
-    self.player_obs.extend_obs(self.me, obs)
+    self.player_obs._extend_obs(self.me, obs)
     return obs
 
   def _handle_step(self) -> Tuple[object, float, bool, object]:
     self._update_obs_grid()
     self._update_reward()
     assert self.me
-    self._draws({
+    self.draws({
       'type': 'line',
       'start': self.me['pos'],
       'end': self.target['pos'],
@@ -68,7 +68,7 @@ class TowerfallMovementEnv(TowerfallEnv):
       'grid': self.obs_grid,
       'target': self.obs_target
     }
-    self.player_obs.extend_obs(self.me, obs)
+    self.player_obs._extend_obs(self.me, obs)
     return obs, self.rew, self.done, {}
 
   def _update_reward(self):

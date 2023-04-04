@@ -35,7 +35,7 @@ class TowerfallEnv(Env, ABC):
     '''Hook for a gym step call.'''
     raise NotImplementedError
 
-  def _draws(self, draw_elem):
+  def draws(self, draw_elem):
     self._draw_elems.append(draw_elem)
 
   def reset(self) -> Tuple[NDArray, object]:

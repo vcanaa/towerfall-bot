@@ -8,6 +8,9 @@ from gym import spaces, Space
 
 from common import Entity, GridView, WIDTH, HEIGHT, Vec2, grid_pos
 
+from .gym_wrapper import TowerfallEnv
+from .observations import TowerfallObservation
+
 from typing import Sequence, Optional, Tuple
 from numpy.typing import NDArray
 
@@ -15,9 +18,16 @@ from numpy.typing import NDArray
 HW = WIDTH // 2
 HH = HEIGHT // 2
 
-class FollowTargetObjective():
-  def __init__(self, env, grid_view: GridView, bounty: int=50, episode_max_len: int=60*5):
-    self.env = env
+class TowerfallObjective(TowerfallObservation):
+  def __init__(self):
+    self.done: bool = False
+    self.rew: float
+    self.env: TowerfallEnv
+
+
+class FollowTargetObjective(TowerfallObjective):
+  def __init__(self, grid_view: GridView, bounty: int=50, episode_max_len: int=60*5):
+    super(FollowTargetObjective, self).__init__()
     self.gv = grid_view
     self.bounty = bounty
     self.episode_max_len = episode_max_len
@@ -27,16 +37,16 @@ class FollowTargetObjective():
   def extend_obs_space(self, obs_space_dict: dict[str, Space]):
     if 'target' in obs_space_dict:
       raise Exception('Observation space already has \'target\'')
-    obs_space_dict['grid'] = self.obs_space
+    obs_space_dict['target'] = self.obs_space
 
-  def handle_reset(self, player: Entity):
+  def handle_reset(self, player: Entity, entities: list[Entity], obs_dict: dict):
     self._set_new_target(player)
     displ = self._get_target_displ(player)
-    self.obs_target: NDArray = np.array([displ.x / HW, displ.y / HH], dtype=np.int8)
+    self.obs_target: NDArray = np.array([displ.x / HW, displ.y / HH], dtype=np.float32)
     self.done = False
     self.episode_len = 0
 
-  def handle_update(self, player: Entity):
+  def handle_step(self, player: Entity, entities: list[Entity], obs_dict: dict):
     self._update_reward(player)
     self.episode_len += 1
     self.env.draws({
@@ -46,8 +56,6 @@ class FollowTargetObjective():
       'color': [1,1,1],
       'thick': 4
     })
-
-  def extend_obs(self, obs_dict: dict):
     obs_dict['target'] = self.obs_target
 
   def _update_reward(self, player: Entity):

@@ -2,8 +2,8 @@ import os
 import logging
 import json
 
-from common import Connection
-from envs import TowerfallMovementExpertEnv
+from common import Connection, GridView
+from envs import TowerfallBlankEnv, GridObservation, PlayerObservation, FollowTargetObjective
 
 from stable_baselines3.common.env_checker import check_env
 from stable_baselines3.ppo import PPO
@@ -18,7 +18,14 @@ logging.getLogger().handlers[0].setFormatter(NoLevelFormatter())
 
 connection = Connection('127.0.0.1', 12024)
 
-env = TowerfallMovementExpertEnv(grid_factor=5, connection=connection)
+grid_view = GridView(grid_factor=5)
+env = TowerfallBlankEnv(
+  connection=connection,
+  observations= [
+    GridObservation(grid_view),
+    PlayerObservation()
+  ],
+  objective=FollowTargetObjective(grid_view))
 check_env(env)
 
 

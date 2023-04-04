@@ -1,54 +1,59 @@
 import logging
 import numpy as np
 
-from gym import spaces
+from gym import spaces, Wrapper
 
 from common import Connection, GridView, Vec2, Entity, to_entities, rand_double_region, grid_pos
 
-from .gym_wrapper import TowerFallEnvWrapper
+from .gym_wrapper import TowerfallEnv
 from .actions import TowerfallActions
+from .observations import PlayerObservation
 
 from numpy.typing import NDArray
 from typing import Tuple, Optional
 
-class TowerFallMovementEnv(TowerFallEnvWrapper):
-  def __init__(self, connection: Connection, actions: Optional[TowerfallActions] = None, grid_factor: int = 2, sight: int = 50):
+class TowerfallMovementEnv(TowerfallEnv):
+  def __init__(self,
+      connection: Connection,
+      actions: Optional[TowerfallActions] = None,
+      grid_factor: int = 2,
+      sight: int = 50):
     """A gym environment for TowerFall Ascension.
     Args:
     TODO: """
 
-    super(TowerFallMovementEnv, self).__init__(connection, actions)
+    super(TowerfallMovementEnv, self).__init__(connection, actions)
     self.gv = GridView(grid_factor)
     self.sight = sight
     n, _ = self.gv.view_sight_length(sight)
     self.obs: dict[str,object]
     self.rew: float
-    self.observation_space = spaces.Dict({
+    obs_space = {
         'grid': spaces.MultiBinary((2*n, 2*n)),
         'target': spaces.Box(low=-2*n, high = 2*n, shape=(2,), dtype=np.int8)
-    })
+    }
+    self.player_obs = PlayerObservation()
+    self.player_obs.extend_obs_space(obs_space)
+    self.observation_space = spaces.Dict(obs_space)
 
-  def _handle_reset(self,
-                    state_scenario: dict,
-                    state_update: dict) -> dict:
+  def _handle_reset(self, state_scenario: dict) -> dict:
     self.gv.set_scenario(state_scenario)
-    self.entities = to_entities(state_update['entities'])
-    self.me = self._get_own_archer(self.entities)
     self._update_obs_grid()
 
     self._set_new_target()
     displ = self._get_target_displ()
     self.obs_target: NDArray = np.array([displ.x, displ.y], dtype=np.int8)
     self.done = False
-    return {
+    obs = {
       'grid': self.obs_grid,
       'target': self.obs_target
     }
+    assert self.me
+    self.player_obs.extend_obs(self.me, obs)
+    return obs
 
-  def _handle_step(self, state_update: dict) -> Tuple[object, float, bool, object]:
-    self.entities = to_entities(state_update['entities'])
-    self.me = self._get_own_archer(self.entities)
-    self._update_obs_grid
+  def _handle_step(self) -> Tuple[object, float, bool, object]:
+    self._update_obs_grid()
     self._update_reward()
     assert self.me
     self._draws({
@@ -59,10 +64,12 @@ class TowerFallMovementEnv(TowerFallEnvWrapper):
       'thick': 4
     })
 
-    return {
+    obs = {
       'grid': self.obs_grid,
       'target': self.obs_target
-    }, self.rew, self.done, {}
+    }
+    self.player_obs.extend_obs(self.me, obs)
+    return obs, self.rew, self.done, {}
 
   def _update_reward(self):
     assert self.me

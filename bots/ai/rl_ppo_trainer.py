@@ -4,7 +4,7 @@ import os
 import sys
 
 sys.path.insert(0, '../..')
-from envs import TowerFallMovementEnv
+from envs import TowerfallMovementEnv
 from common import Connection
 
 from stable_baselines3 import PPO
@@ -37,7 +37,7 @@ configs = {
 def main(load_from=None, save_to=None):
     connection = Connection(_HOST, _PORT)
 
-    env = TowerFallMovementEnv(grid_factor=2, sight=50, connection=connection)
+    env = TowerfallMovementEnv(grid_factor=2, sight=50, connection=connection)
     check_env(env)
 
     if  load_from is not None and os.path.exists(load_from):
@@ -52,7 +52,7 @@ def main(load_from=None, save_to=None):
             policy_kwargs=configs['policy_kwargs'],
             verbose=1
         )
-    
+
     logging.info('###############################################')
     logging.info(f'Starting to train for {configs["total_timesteps"]} timesteps...')
 
@@ -72,5 +72,5 @@ if __name__ == '__main__':
     parser.add_argument('--load-from', type=str, default=None)
     parser.add_argument('--save-to', type=str, default='rl_models/test.model')
     args = parser.parse_args()
-    
+
     main(**vars(args))

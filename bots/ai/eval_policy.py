@@ -4,7 +4,7 @@ import os
 import sys
 
 sys.path.insert(0, '../..')
-from envs import TowerFallMovementEnv
+from envs import TowerfallMovementEnv
 from common import Connection
 
 from stable_baselines3 import PPO
@@ -34,7 +34,7 @@ def main(load_from, eval_policy=False):
 
     # TODO: why is get_env() returning None?
     # model.get_env()
-    env = TowerFallMovementEnv(grid_factor=2, sight=50, connection=Connection(_HOST, _PORT))
+    env = TowerfallMovementEnv(grid_factor=2, sight=50, connection=Connection(_HOST, _PORT))
     check_env(env)
 
     # Evaluate the agent

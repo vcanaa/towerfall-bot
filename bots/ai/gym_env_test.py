@@ -1,6 +1,6 @@
 import sys
 
-from envs import TowerFallMovementEnv
+from envs import TowerfallMovementEnv
 sys.path.insert(0, '../..')
 from common import Connection
 
@@ -16,7 +16,7 @@ _PORT = 12024
 connection = Connection(_HOST, _PORT)
 
 
-env = TowerFallMovementEnv(grid_factor=2, sight=50, connection=connection)
+env = TowerfallMovementEnv(grid_factor=2, sight=50, connection=connection)
 # env = make_vec_env("CartPole-v1", n_envs=4)
 
 # model = PPO("MlpPolicy", env, verbose=1)

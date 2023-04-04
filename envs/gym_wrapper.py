@@ -2,17 +2,20 @@ import json
 
 from abc import ABC, abstractmethod
 
-from common import Connection, Entity
+from common import Connection, Entity, to_entities
 
 from .actions import TowerfallActions
+from .observations import PlayerObservation
 
 from typing import List, Optional, Tuple
 from numpy.typing import NDArray
 
 from gym import Env
 
-class TowerFallEnvWrapper(Env, ABC):
-  def __init__(self, connection: Connection, actions: Optional[TowerfallActions] = None):
+class TowerfallEnv(Env, ABC):
+  def __init__(self,
+      connection: Connection,
+      actions: Optional[TowerfallActions] = None):
     self.connection = connection
     if actions:
       self.actions = actions
@@ -23,12 +26,12 @@ class TowerFallEnvWrapper(Env, ABC):
     self.connection.read()
 
   @abstractmethod
-  def _handle_reset(self, state_scenario: dict, state_update: dict):
+  def _handle_reset(self):
     '''Hook for a gym reset call.'''
     raise NotImplementedError
 
   @abstractmethod
-  def _handle_step(self, state_update: dict) -> Tuple[NDArray, float, bool, object]:
+  def _handle_step(self) -> Tuple[NDArray, float, bool, object]:
     '''Hook for a gym step call.'''
     raise NotImplementedError
 
@@ -51,7 +54,9 @@ class TowerFallEnvWrapper(Env, ABC):
 
     state_update = self._read_game_state()
     assert state_update['type'] == 'update'
-    return self._handle_reset(self.state_scenario, state_update)
+    self.entities = to_entities(state_update['entities'])
+    self.me = self._get_own_archer(self.entities)
+    return self._handle_reset()
 
   def step(self, actions: NDArray) -> Tuple[NDArray, float, bool, object]:
     '''Gym step'''
@@ -67,7 +72,9 @@ class TowerFallEnvWrapper(Env, ABC):
     self._draw_elems.clear()
     state_update = self._read_game_state()
     assert state_update['type'] == 'update'
-    return self._handle_step(state_update)
+    self.entities = to_entities(state_update['entities'])
+    self.me = self._get_own_archer(self.entities)
+    return self._handle_step()
 
   def _get_own_archer(self, entities: List[Entity]) -> Optional[Entity]:
     '''Iterates over all entities to find the archer that matches the index specified in init.'''

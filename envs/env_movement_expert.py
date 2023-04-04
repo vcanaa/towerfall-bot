@@ -6,8 +6,9 @@ from gym import spaces
 
 from common import Connection, GridView, Vec2, Entity, to_entities, rand_double_region, grid_pos, WIDTH, HEIGHT
 
-from .gym_wrapper import TowerFallEnvWrapper
+from .gym_wrapper import TowerfallEnv
 from .actions import TowerfallActions
+from .observations import PlayerObservation
 
 from numpy.typing import NDArray
 from typing import Tuple, Optional
@@ -15,11 +16,11 @@ from typing import Tuple, Optional
 HW = WIDTH // 2
 HH = HEIGHT // 2
 
-class TowerfallMovementExpertEnv(TowerFallEnvWrapper):
+class TowerfallMovementExpertEnv(TowerfallEnv):
   '''In each episode of this environment, the agent has to move from point A to point B.
   For every frame positive reward is given for getting closer to target and negative reward is given for distantiating from target.
   When reaching the target, agent receives a bigger bounty.'''
-  def __init__(self, connection: Connection, actions: Optional[TowerfallActions] = None, grid_factor: int = 2, bounty=50, episode_max_len: int=60*5):
+  def __init__(self, connection: Connection, actions: Optional[TowerfallActions] = None):
     super(TowerfallMovementExpertEnv, self).__init__(connection, actions)
     self.gv = GridView(grid_factor)
     m, n = self.gv.view_sight_length(None)
@@ -28,16 +29,14 @@ class TowerfallMovementExpertEnv(TowerFallEnvWrapper):
     # logging.info('m, n: %s, %s', m, n)
     self.obs: dict[str,object]
     self.rew: float
-    self.observation_space = spaces.Dict({
-        'dodgeCooldown': spaces.Discrete(2),
-        'dodging': spaces.Discrete(2),
-        'facing': spaces.Discrete(2),
-        'grid': spaces.MultiBinary((2*m, 2*n)),
-        'onGround': spaces.Discrete(2),
-        'onWall': spaces.Discrete(2),
-        'target': spaces.Box(low=-1, high=1, shape=(2,), dtype=np.float32),
-        'vel': spaces.Box(low=-2, high=2, shape=(2,), dtype=np.float32),
-    })
+
+    obs_space = {
+        'grid': spaces.MultiBinary((2*n, 2*n)),
+        'target': spaces.Box(low=-2*n, high = 2*n, shape=(2,), dtype=np.int8)
+    }
+    self.player_obs = PlayerObservation()
+    self.player_obs.extend_obs_space(obs_space)
+    self.observation_space = spaces.Dict(obs_space)
     logging.info(str(self.observation_space))
 
   def _handle_reset(self, state_scenario: dict, state_update: dict) -> dict:
@@ -56,7 +55,6 @@ class TowerfallMovementExpertEnv(TowerFallEnvWrapper):
   def _handle_step(self, state_update: dict) -> Tuple[object, float, bool, object]:
     self.entities = to_entities(state_update['entities'])
     self.me = self._get_own_archer(self.entities)
-    self._update_obs_grid()
     self._update_reward()
     self.episode_len += 1
     assert self.me

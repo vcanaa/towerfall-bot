@@ -4,7 +4,7 @@ from gym import spaces
 
 from common import Connection
 
-from .gym_wrapper import TowerfallEnv
+from .base_env import TowerfallEnv
 from .actions import TowerfallActions
 from .observations import TowerfallObservation
 from .objectives import TowerfallObjective

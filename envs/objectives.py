@@ -1,26 +1,20 @@
-import numpy as np
 import logging
 import random
-
-# from abc import ABC, abstractmethod
+import numpy as np
 
 from gym import spaces, Space
 
-from common import Entity, GridView, WIDTH, HEIGHT, Vec2, grid_pos
+from common import Entity, GridView, WIDTH, HEIGHT, HW, HH, Vec2, grid_pos
 
 from .gym_wrapper import TowerfallEnv
 from .observations import TowerfallObservation
 
-from typing import Sequence, Optional, Tuple
 from numpy.typing import NDArray
 
 
-HW = WIDTH // 2
-HH = HEIGHT // 2
-
 class TowerfallObjective(TowerfallObservation):
   def __init__(self):
-    self.done: bool = False
+    self.done: bool
     self.rew: float
     self.env: TowerfallEnv
 
@@ -39,12 +33,13 @@ class FollowTargetObjective(TowerfallObjective):
       raise Exception('Observation space already has \'target\'')
     obs_space_dict['target'] = self.obs_space
 
-  def handle_reset(self, player: Entity, entities: list[Entity], obs_dict: dict):
+  def handle_reset(self, state_scenario: dict, player: Entity, entities: list[Entity], obs_dict: dict):
     self._set_new_target(player)
     displ = self._get_target_displ(player)
     self.obs_target: NDArray = np.array([displ.x / HW, displ.y / HH], dtype=np.float32)
     self.done = False
     self.episode_len = 0
+    obs_dict['target'] = self.obs_target
 
   def handle_step(self, player: Entity, entities: list[Entity], obs_dict: dict):
     self._update_reward(player)

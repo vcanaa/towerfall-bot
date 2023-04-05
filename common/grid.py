@@ -110,7 +110,6 @@ class GridView():
           break
     return min(max, dist)
 
-
   def view_sight_length(self, sight: Optional[Union[int, Tuple[int, int]]]) -> Tuple[int, int]:
     '''Gets the length of view using the specified sight.'''
     if not sight:

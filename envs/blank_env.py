@@ -1,24 +1,19 @@
 import logging
-import numpy as np
-import random
 
 from gym import spaces
 
-from common import Connection, GridView, Vec2, Entity, to_entities, rand_double_region, grid_pos, WIDTH, HEIGHT
+from common import Connection
 
 from .gym_wrapper import TowerfallEnv
 from .actions import TowerfallActions
-from .observations import PlayerObservation, TowerfallObservation
+from .observations import TowerfallObservation
 from .objectives import TowerfallObjective
 
-from numpy.typing import NDArray
 from typing import Tuple, Optional
 
-HW = WIDTH // 2
-HH = HEIGHT // 2
 
 class TowerfallBlankEnv(TowerfallEnv):
-  '''A blank canvas for environment design. Add observations and an objective to customize what the environment sees.'''
+  '''A blank environment that can be customized with the addition of observations and an objective.'''
   def __init__(self,
       connection: Connection,
       observations: list[TowerfallObservation],
@@ -46,5 +41,5 @@ class TowerfallBlankEnv(TowerfallEnv):
     obs_dict = {}
     assert self.me
     for obs in self.components:
-      obs.handle_reset(self.state_scenario, self.me, self.entities, obs_dict)
+      obs.handle_step(self.me, self.entities, obs_dict)
     return obs_dict, self.objective.rew, self.objective.done, {}

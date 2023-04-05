@@ -5,7 +5,6 @@ from abc import ABC, abstractmethod
 from common import Connection, Entity, to_entities
 
 from .actions import TowerfallActions
-from .observations import PlayerObservation
 
 from typing import List, Optional, Tuple
 from numpy.typing import NDArray

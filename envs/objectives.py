@@ -6,7 +6,7 @@ from gym import spaces, Space
 
 from common import Entity, GridView, WIDTH, HEIGHT, HW, HH, Vec2, grid_pos
 
-from .gym_wrapper import TowerfallEnv
+from .base_env import TowerfallEnv
 from .observations import TowerfallObservation
 
 from numpy.typing import NDArray

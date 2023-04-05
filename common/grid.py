@@ -5,7 +5,8 @@ import matplotlib.pyplot as plt
 
 from numpy.typing import NDArray
 
-from .common import WIDTH, HEIGHT, Entity, bounded, Vec2, grid_pos
+from .common import Entity, bounded, Vec2, grid_pos
+from .constants import WIDTH, HEIGHT, HW, HH
 
 from typing import List, Tuple, Union, Optional
 
@@ -82,8 +83,8 @@ class GridView():
       if e.type == 'crackedWall':
         fill_grid(e, self.grid)
     # self._plot_grid(a, 'a')
-    self.shifted_grid = np.roll(self.grid, -int(me.p.x - WIDTH // 2) // self.gf, axis=0)
-    self.shifted_grid = np.roll(self.shifted_grid, -int(me.p.y - HEIGHT // 2) // self.gf, axis=1)
+    self.shifted_grid = np.roll(self.grid, -int(me.p.x - HW) // self.gf, axis=0)
+    self.shifted_grid = np.roll(self.shifted_grid, -int(me.p.y - HH) // self.gf, axis=1)
     # logging.info('obs_grid: {}'.format(self.obs_grid.shape))
     # self._plot_grid(self.obs_grid, 'obs_grid')
     # print(self.obs_grid)
@@ -114,12 +115,12 @@ class GridView():
   def view_sight_length(self, sight: Optional[Union[int, Tuple[int, int]]]) -> Tuple[int, int]:
     '''Gets the length of view using the specified sight.'''
     if not sight:
-      return WIDTH // 2 // self.gf, HEIGHT // 2 // self.gf
+      return HW // self.gf, HH // self.gf
     if isinstance(sight, int):
-      m = n = min(sight // self.gf, HEIGHT // 2 // self.gf )
+      m = n = min(sight // self.gf, HH // self.gf )
     else:
-      m = min(sight[0] // self.gf, WIDTH // 2 // self.gf)
-      n = min(sight[1] // self.gf, HEIGHT // 2 // self.gf)
+      m = min(sight[0] // self.gf, HW // self.gf)
+      n = min(sight[1] // self.gf, HH // self.gf)
     return m, n
 
 

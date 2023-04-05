@@ -4,8 +4,8 @@ import os
 import sys
 
 sys.path.insert(0, '../..')
-from envs import TowerfallMovementEnv
-from common import Connection
+from envs import TowerfallBlankEnv, GridObservation, PlayerObservation, FollowTargetObjective
+from common import Connection, GridView
 
 from stable_baselines3 import PPO
 from stable_baselines3.common.env_util import make_vec_env
@@ -37,7 +37,14 @@ configs = {
 def main(load_from=None, save_to=None):
     connection = Connection(_HOST, _PORT)
 
-    env = TowerfallMovementEnv(grid_factor=2, sight=50, connection=connection)
+    grid_view = GridView(grid_factor=5)
+    env = TowerfallBlankEnv(
+      connection=connection,
+      observations= [
+        GridObservation(grid_view),
+        PlayerObservation()
+      ],
+      objective=FollowTargetObjective(grid_view))
     check_env(env)
 
     if  load_from is not None and os.path.exists(load_from):

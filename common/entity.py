@@ -22,11 +22,11 @@ class Entity:
   def __getitem__(self, key):
     return self.e[key]
 
-  def topLeft(self) -> Vec2:
+  def bot_left(self) -> Vec2:
     return Vec2(self.p.x - self.s.x / 2, self.p.y - self.s.y / 2)
 
 
-  def bottomRight(self) -> Vec2:
+  def top_right(self) -> Vec2:
     return Vec2(self.p.x + self.s.x / 2, self.p.y + self.s.y / 2)
 
 
@@ -35,12 +35,30 @@ class Vec2:
     self.x: float = x
     self.y: float = y
 
-
   def __str__(self):
     return 'Vec2({}, {})'.format(self.x, self.y)
 
   def __hash__(self):
     return hash((self.x, self.y))
+
+  def __add__(self, o):
+    return Vec2(self.x + o.x, self.y + o.y)
+
+  def __sub__(self, o):
+    return Vec2(self.x - o.x, self.y - o.y)
+
+  def __neg__(self):
+    return Vec2(-self.x, -self.y)
+
+  def __mul__(self, o):
+    if isinstance(o, float) or isinstance(o, int):
+      return Vec2(self.x * o, self.y * o)
+    raise NotImplementedError()
+
+  def __truediv__(self, o):
+    if isinstance(o, float) or isinstance(o, int):
+      return Vec2(self.x / o, self.y / o)
+    raise NotImplementedError()
 
   def __eq__(self, other):
     if isinstance(other, Vec2):
@@ -54,16 +72,16 @@ class Vec2:
   def tupleint(self) -> Tuple[int, int]:
     return int(self.x), int(self.y)
 
-
-  def array(self) -> NDArray:
+  def numpy(self) -> NDArray[np.float32]:
     return np.array([self.x, self.y], dtype=np.float32)
 
+  def dict(self) -> dict[str, float]:
+    return dict(x=self.x, y=self.y)
 
   def set_length(self, l: float):
     d = self.length()
     self.x *= l/d
     self.y *= l/d
-
 
   def length(self):
     return sqrt(self.x**2 + self.y**2)

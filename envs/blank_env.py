@@ -30,16 +30,26 @@ class TowerfallBlankEnv(TowerfallEnv):
     self.observation_space = spaces.Dict(obs_space)
     logging.info(str(self.observation_space))
 
-  def _handle_reset(self) -> dict:
+  def _is_reset_valid(self) -> bool:
+    assert self.me
+    return self.objective.is_reset_valid(self.state_scenario, self.me, self.entities)
+
+  def _send_reset(self):
+    reset_inst = self.objective.get_reset_instruction()
+    self.connection.write_reset(**reset_inst)
+
+  def _post_reset(self) -> dict:
     obs_dict = {}
     assert self.me
     for obs in self.components:
-      obs.handle_reset(self.state_scenario, self.me, self.entities, obs_dict)
+      obs.post_reset(self.state_scenario, self.me, self.entities, obs_dict)
+    # logging.info(f"reset: {str(obs_dict)}")
     return obs_dict
 
-  def _handle_step(self) -> Tuple[object, float, bool, object]:
+  def _post_step(self) -> Tuple[object, float, bool, object]:
     obs_dict = {}
     assert self.me
     for obs in self.components:
-      obs.handle_step(self.me, self.entities, obs_dict)
+      obs.post_step(self.me, self.entities, obs_dict)
+    # logging.info(f"step: {str(obs_dict)}")
     return obs_dict, self.objective.rew, self.objective.done, {}

@@ -11,6 +11,7 @@ from numpy.typing import NDArray
 
 from gym import Env
 
+
 class TowerfallEnv(Env, ABC):
   def __init__(self,
       connection: Connection,
@@ -24,13 +25,21 @@ class TowerfallEnv(Env, ABC):
     self._draw_elems = []
     self.connection.read()
 
+  def _is_reset_valid(self) -> bool:
+    '''Use this to make the reset environment is valid. If False is returned the environment will be reset again.'''
+    return True
+
+  def _send_reset(self):
+    '''Sends the reset instruction to the game. Overwrite this to change the start conditions.'''
+    self.connection.write_reset()
+
   @abstractmethod
-  def _handle_reset(self):
+  def _post_reset(self):
     '''Hook for a gym reset call.'''
     raise NotImplementedError
 
   @abstractmethod
-  def _handle_step(self) -> Tuple[NDArray, float, bool, object]:
+  def _post_step(self) -> Tuple[NDArray, float, bool, object]:
     '''Hook for a gym step call.'''
     raise NotImplementedError
 
@@ -39,23 +48,28 @@ class TowerfallEnv(Env, ABC):
 
   def reset(self) -> Tuple[NDArray, object]:
     '''Gym reset'''
-    self.connection.write_instruction('config', pos={'x': 160, 'y': 80})
 
-    state_init = self._read_game_state()
-    assert state_init['type'] == 'init'
-    self.index = state_init['index']
-    self.connection.write('.')
-    self.frame = 0
+    while True:
+      self._send_reset()
 
-    self.state_scenario = self._read_game_state()
-    assert self.state_scenario['type'] == 'scenario'
-    self.connection.write('.')
+      state_init = self._read_game_state()
+      assert state_init['type'] == 'init'
+      self.index = state_init['index']
+      self.connection.write('.')
+      self.frame = 0
 
-    state_update = self._read_game_state()
-    assert state_update['type'] == 'update'
-    self.entities = to_entities(state_update['entities'])
-    self.me = self._get_own_archer(self.entities)
-    return self._handle_reset()
+      self.state_scenario = self._read_game_state()
+      assert self.state_scenario['type'] == 'scenario'
+      self.connection.write('.')
+
+      state_update = self._read_game_state()
+      assert state_update['type'] == 'update'
+      self.entities = to_entities(state_update['entities'])
+      self.me = self._get_own_archer(self.entities)
+      if self._is_reset_valid():
+        break
+
+    return self._post_reset()
 
   def step(self, actions: NDArray) -> Tuple[NDArray, float, bool, object]:
     '''Gym step'''
@@ -73,7 +87,7 @@ class TowerfallEnv(Env, ABC):
     assert state_update['type'] == 'update'
     self.entities = to_entities(state_update['entities'])
     self.me = self._get_own_archer(self.entities)
-    return self._handle_step()
+    return self._post_step()
 
   def _get_own_archer(self, entities: List[Entity]) -> Optional[Entity]:
     '''Iterates over all entities to find the archer that matches the index specified in init.'''

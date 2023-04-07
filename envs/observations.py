@@ -15,12 +15,12 @@ class TowerfallObservation(ABC):
     raise NotImplementedError()
 
   @abstractmethod
-  def handle_reset(self, state_scenario: dict, player: Entity, entities: list[Entity], obs_dict: dict):
+  def post_reset(self, state_scenario: dict, player: Entity, entities: list[Entity], obs_dict: dict):
     '''Hook for a gym reset call.'''
     raise NotImplementedError
 
   @abstractmethod
-  def handle_step(self, player: Entity, entities: list[Entity], obs_dict: dict):
+  def post_step(self, player: Entity, entities: list[Entity], obs_dict: dict):
     '''Hook for a gym step call.'''
     raise NotImplementedError
 
@@ -45,10 +45,10 @@ class PlayerObservation(TowerfallObservation):
     try_add_obs('onWall', spaces.Discrete(2))
     try_add_obs('vel', spaces.Box(low=-2, high=2, shape=(2,), dtype=np.float32))
 
-  def handle_reset(self, state_scenario: dict, player: Entity, entities: list[Entity], obs_dict: dict):
+  def post_reset(self, state_scenario: dict, player: Entity, entities: list[Entity], obs_dict: dict):
     self._extend_obs(player, obs_dict)
 
-  def handle_step(self, player: Entity, entities: list[Entity], obs_dict):
+  def post_step(self, player: Entity, entities: list[Entity], obs_dict):
     self._extend_obs(player, obs_dict)
 
   def _extend_obs(self, player: Entity, obs_dict: dict):
@@ -63,8 +63,7 @@ class PlayerObservation(TowerfallObservation):
     try_add_obs('facing', (player['facing'] + 1) // 2) # -1,1 -> 0,1
     try_add_obs('onGround', int(player['onGround']))
     try_add_obs('onWall', int(player['onWall']))
-    try_add_obs('vel', player.v.array() / 5)
-
+    try_add_obs('vel', np.clip(player.v.numpy() / 5, -2, 2))
 
 class GridObservation(TowerfallObservation):
   def __init__(self, grid_view: GridView, sight: Optional[Tuple[int, int]] = None):
@@ -78,12 +77,12 @@ class GridObservation(TowerfallObservation):
       raise Exception('Observation space already has \'grid\'')
     obs_space_dict['grid'] = self.obs_space
 
-  def handle_reset(self, state_scenario: dict, player: Entity, entities: list[Entity], obs_dict: dict):
+  def post_reset(self, state_scenario: dict, player: Entity, entities: list[Entity], obs_dict: dict):
     self.gv.set_scenario(state_scenario)
     self.gv.update(entities, player)
     self._extend_obs(obs_dict)
 
-  def handle_step(self, player: Entity, entities: list[Entity], obs_dict: dict):
+  def post_step(self, player: Entity, entities: list[Entity], obs_dict: dict):
     self.gv.update(entities, player)
     self._extend_obs(obs_dict)
 

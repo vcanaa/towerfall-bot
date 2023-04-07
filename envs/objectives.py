@@ -2,6 +2,8 @@ import logging
 import random
 import numpy as np
 
+from abc import abstractmethod
+
 from gym import spaces, Space
 
 from common import Entity, GridView, WIDTH, HEIGHT, HW, HH, Vec2, grid_pos
@@ -9,6 +11,7 @@ from common import Entity, GridView, WIDTH, HEIGHT, HW, HH, Vec2, grid_pos
 from .base_env import TowerfallEnv
 from .observations import TowerfallObservation
 
+from typing import Optional, Tuple
 from numpy.typing import NDArray
 
 
@@ -17,6 +20,13 @@ class TowerfallObjective(TowerfallObservation):
     self.done: bool
     self.rew: float
     self.env: TowerfallEnv
+
+  def is_reset_valid(self, state_scenario: dict, player: Entity, entities: list[Entity]) -> bool:
+    return True
+
+  def get_reset_instruction(self) -> dict:
+    '''Specifies how the environment needs to be reset.'''
+    return {}
 
 
 class FollowTargetObjective(TowerfallObjective):
@@ -33,15 +43,14 @@ class FollowTargetObjective(TowerfallObjective):
       raise Exception('Observation space already has \'target\'')
     obs_space_dict['target'] = self.obs_space
 
-  def handle_reset(self, state_scenario: dict, player: Entity, entities: list[Entity], obs_dict: dict):
-    self._set_new_target(player)
-    displ = self._get_target_displ(player)
-    self.obs_target: NDArray = np.array([displ.x / HW, displ.y / HH], dtype=np.float32)
-    self.done = False
-    self.episode_len = 0
+  def post_reset(self, state_scenario: dict, player: Entity, entities: list[Entity], obs_dict: dict, target: Optional[Tuple[float, float]] = None):
+    if target:
+      self.set_target(player, *target)
+    else:
+      self._set_random_target(player)
     obs_dict['target'] = self.obs_target
 
-  def handle_step(self, player: Entity, entities: list[Entity], obs_dict: dict):
+  def post_step(self, player: Entity, entities: list[Entity], obs_dict: dict):
     self._update_reward(player)
     self.episode_len += 1
     self.env.draws({
@@ -66,11 +75,22 @@ class FollowTargetObjective(TowerfallObjective):
       self.done = True
       logging.info('Done. Timeout.')
     self.prev_disp_len = disp_len
-    self.obs_target: NDArray = np.array([displ.x / HW, displ.y / HH], dtype=np.float32)
-    if self.done:
-      self._set_new_target(player)
 
-  def _set_new_target(self, player: Entity):
+  def set_target(self, player: Entity, x, y):
+    self.target = Entity(e = {
+      'pos': {'x': x, 'y': y},
+      'vel': {'x': 0, 'y': 0},
+      'size':{'x': 5, 'y': 5},
+      'isEnemy': False,
+      'type': 'fake'
+    })
+    displ = self._get_target_displ(player)
+    self.obs_target: NDArray = np.array([displ.x / HW, displ.y / HH], dtype=np.float32)
+    self.prev_disp_len = displ.length()
+    self.done = False
+    self.episode_len = 0
+
+  def _set_random_target(self, player: Entity):
     while True:
       x = random.randint(0, WIDTH)
       y = random.randint(0, HEIGHT)
@@ -79,15 +99,7 @@ class FollowTargetObjective(TowerfallObjective):
       if not self.gv.fixed_grid10[i][j]:
         break
     # logging.info('New target: (x, y): ({} {})'.format(x, y))
-    self.target = Entity(e = {
-      'pos': {'x': x, 'y': y},
-      'vel': {'x': 0, 'y': 0},
-      'size':{'x': 5, 'y': 5},
-      'isEnemy': False,
-      'type': 'fake'
-    })
-    # New target is only used in the next loop.
-    self.prev_disp_len = self._get_target_displ(player).length()
+    self.set_target(player, x, y)
 
   def _get_target_displ(self, player: Entity):
     '''Gets the displacement of of the target from the player.'''

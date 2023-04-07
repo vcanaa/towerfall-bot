@@ -31,12 +31,12 @@ def fill_grid(e: Entity, grid: NDArray, shouldLog = False):
     raise Exception('fillGrid requires factor to be integer: {}'.format(factor))
   if HEIGHT / grid.shape[1] != factor:
     raise Exception('Invalid aspect rate for grid: {}'.format(grid.shape))
-  topLeft = e.topLeft()
-  botRight = e.bottomRight()
-  x1 = int(bounded(topLeft.x // factor, 0, grid.shape[0]))
-  x2 = int(bounded(botRight.x // factor, 0, grid.shape[0]))
-  y1 = int(bounded(topLeft.y // factor, 0, grid.shape[1]))
-  y2 = int(bounded(botRight.y // factor, 0, grid.shape[1]))
+  bot_left = e.bot_left()
+  top_right = e.top_right()
+  x1 = int(bounded(bot_left.x // factor, 0, grid.shape[0]))
+  x2 = int(bounded(top_right.x // factor, 0, grid.shape[0]))
+  y1 = int(bounded(bot_left.y // factor, 0, grid.shape[1]))
+  y2 = int(bounded(top_right.y // factor, 0, grid.shape[1]))
   if shouldLog:
     logging.info("{} {} {} {}".format(x1,x2,y1,y2))
   if x2 > x1:
@@ -54,6 +54,19 @@ def fill_grid(e: Entity, grid: NDArray, shouldLog = False):
       grid[x1:grid.shape[0], 0:y2] = 1
       grid[0:x2, 0:grid.shape[1]] = 1
       grid[0:x2, 0:y2] = 1
+
+
+def crop_grid(bot_left: Vec2, top_right: Vec2, grid: NDArray, shouldLog = False):
+  factor = WIDTH / grid.shape[0]
+  if WIDTH % grid.shape[0] != 0:
+    raise Exception('fillGrid requires factor to be integer: {}'.format(factor))
+  if HEIGHT / grid.shape[1] != factor:
+    raise Exception('Invalid aspect rate for grid: {}'.format(grid.shape))
+  x1 = int(bounded(bot_left.x // factor, 0, grid.shape[0]))
+  x2 = int(bounded(top_right.x // factor, 0, grid.shape[0]))
+  y1 = int(bounded(bot_left.y // factor, 0, grid.shape[1]))
+  y2 = int(bounded(top_right.y // factor, 0, grid.shape[1]))
+  return grid[x1:x2, y1:y2]
 
 
 class GridView():
@@ -134,3 +147,20 @@ class GridView():
         W // 2 - m: W // 2 + m,
         H // 2 - n: H // 2 + n]
 
+  def is_cell_blocked(self, i: int, j: int) -> bool:
+    '''Checks whether a cell is blocked by walls'''
+    m, n = self.fixed_grid10.shape
+    i %= m
+    j %= n
+    return self.fixed_grid10[i, j]
+
+  def is_region_collision(self, bot_left: Vec2, top_right: Vec2):
+    # TODO make crop do the wrap around the edges so we dont end up with empty crops
+    crop = crop_grid(bot_left, top_right, self.grid)
+    if crop.shape[1] == 0:
+      return True
+    try:
+      return crop.max() != 0
+    except:
+      print(f'crop: {crop} {len(crop)} {crop.shape} {bot_left} {top_right}')
+      raise Exception()

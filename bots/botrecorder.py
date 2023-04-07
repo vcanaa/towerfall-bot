@@ -139,7 +139,7 @@ class BotRecorder(Bot):
 
     if hasattr(self, 'input_state'):
       output_state = np.concatenate([
-        self.me.v.array()
+        self.me.v.numpy()
       ])
 
     self.input_state = np.concatenate([
@@ -151,7 +151,7 @@ class BotRecorder(Bot):
       self.control.ver(),
       self.control.jump_state(),
       self.control.dash_state(),
-      self.me.v.array()
+      self.me.v.numpy()
     ])
 
     if 4 in self.control.pressed_keys:

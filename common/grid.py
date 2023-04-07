@@ -164,3 +164,15 @@ class GridView():
     except:
       print(f'crop: {crop} {len(crop)} {crop.shape} {bot_left} {top_right}')
       raise Exception()
+
+  def is_clean_path(self, p1: Vec2, p2: Vec2) -> bool:
+    dp = p2 - p1
+    dmax = int(dp.length() / self.gf)
+    dp.set_length(self.gf)
+    p = p1.copy()
+    for i in range(dmax):
+      pgrid = grid_pos(p, self.gf)
+      if self.grid[pgrid] > 0:
+        return False
+      p.add(dp)
+    return True

@@ -30,12 +30,21 @@ class TowerfallObjective(TowerfallObservation):
 
 
 class FollowTargetObjective(TowerfallObjective):
-  def __init__(self, grid_view: GridView, bounty: int=50, episode_max_len: int=60*5):
+  '''
+  Specifies observation and rewards associated with moving to a target location.
+
+  :param grid_view: Used to detect collisions when resetting the target.
+  :param bounty: Reward received when reaching the location
+  :param episode_max_len: Amount of frames after which the episode ends
+  :param rew_dc: Agent loses this amount of reward per frame, in order to force it to get the target faster
+  '''
+  def __init__(self, grid_view: GridView, bounty: int=50, episode_max_len: int=60*2, rew_dc=1):
     super(FollowTargetObjective, self).__init__()
     self.gv = grid_view
     self.bounty = bounty
     self.episode_max_len = episode_max_len
     self.episode_len = 0
+    self.rew_dc = rew_dc
     self.obs_space = spaces.Box(low=-2, high = 2, shape=(2,), dtype=np.float32)
 
   def extend_obs_space(self, obs_space_dict: dict[str, Space]):

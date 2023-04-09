@@ -50,6 +50,6 @@ class TowerfallBlankEnv(TowerfallEnv):
     obs_dict = {}
     assert self.me
     for obs in self.components:
-      obs.post_step(self.me, self.entities, obs_dict)
+      obs.post_step(self.me, self.entities, self.command, obs_dict)
     # logging.info(f"step: {str(obs_dict)}")
     return obs_dict, self.objective.rew, self.objective.done, {}

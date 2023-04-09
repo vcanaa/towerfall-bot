@@ -59,7 +59,7 @@ class FollowTargetObjective(TowerfallObjective):
       self._set_random_target(player)
     obs_dict['target'] = self.obs_target
 
-  def post_step(self, player: Entity, entities: list[Entity], obs_dict: dict):
+  def post_step(self, player: Entity, entities: list[Entity], command: str, obs_dict: dict):
     self._update_reward(player)
     self.episode_len += 1
     self.env.draws({

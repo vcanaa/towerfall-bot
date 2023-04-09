@@ -4,9 +4,7 @@ import random
 
 from gym import Space
 
-from abc import ABC, abstractmethod
-
-from common import GridView, Entity, Connection, Vec2, WIDTH, HEIGHT
+from common import GridView, Entity, Vec2, WIDTH, HEIGHT
 
 from .objectives import FollowTargetObjective
 from .objectives import TowerfallObjective
@@ -28,16 +26,23 @@ class MyDecoder(json.JSONDecoder):
 
   def object_hook(self, dct):
     if '__Vec2__' in dct:
+      del dct['__Vec2__']
       return Vec2(**dct)
     return dct
 
 class FollowCloseTargetCurriculum(TowerfallObjective):
   '''Creates a series tasks where the agent needs to get to a closeby target.'''
-  def __init__(self, grid_view: GridView):
+  def __init__(self, grid_view: GridView, bounty=10, episode_max_len=90, rew_dc=2):
     self.gv = grid_view
-    self.objective = FollowTargetObjective(grid_view)
+    self.objective = FollowTargetObjective(grid_view, bounty, episode_max_len, rew_dc)
     self.task_idx = -1
-    self.initialized = False
+    self.initialized = True
+    self.filename = 'tasks.json'
+    with open(self.filename, 'r') as file:
+      self.start_ends = json.loads(file.read(), cls=MyDecoder)
+    random.shuffle(self.start_ends)
+    # self.start_ends = self.start_ends[:5]
+    self.max_total_steps = episode_max_len * len(self.start_ends)
 
   def is_reset_valid(self, state_scenario: dict, player: Entity, entities: list[Entity]) -> bool:
     if self.initialized:
@@ -64,13 +69,13 @@ class FollowCloseTargetCurriculum(TowerfallObjective):
           continue
         self.start_ends.append((start, end))
 
-    filename = 'tasks.json'
-    logging.info(f'Saving tasks to {filename}')
-    with open(filename, 'w') as file:
+    logging.info(f'Saving tasks to {self.filename}')
+    with open(self.filename, 'w') as file:
       file.write(json.dumps(self.start_ends, cls=MyEncoder))
 
     random.shuffle(self.start_ends)
     self.initialized = True
+    return False
 
   def extend_obs_space(self, obs_space_dict: dict[str, Space]):
     self.objective.extend_obs_space(obs_space_dict)
@@ -80,6 +85,10 @@ class FollowCloseTargetCurriculum(TowerfallObjective):
       return {}
     self.objective.env = self.env
     self.task_idx += 1
+    if self.task_idx == len(self.start_ends):
+      # TODO generate report
+      # Restart from the first task.
+      self.task_idx = 0
     self.start, self.end = self.start_ends[self.task_idx]
     return dict(pos = self.start.dict())
 
@@ -87,8 +96,8 @@ class FollowCloseTargetCurriculum(TowerfallObjective):
     target = (self.end.x, self.end.y)
     self.objective.post_reset(state_scenario, player, entities, obs_dict, target)
 
-  def post_step(self, player: Entity, entities: list[Entity], obs_dict: dict):
-    self.objective.post_step(player, entities, obs_dict)
+  def post_step(self, player: Entity, entities: list[Entity], command: str, obs_dict: dict):
+    self.objective.post_step(player, entities, command, obs_dict)
     self.rew = self.objective.rew
     self.done = self.objective.done
 

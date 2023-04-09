@@ -4,7 +4,7 @@ from abc import ABC, abstractmethod
 
 from gym import spaces, Space
 
-from common import Entity, GridView
+from common import Entity, GridView, JUMP, DASH, SHOOT
 
 from typing import Sequence, Optional, Tuple
 
@@ -20,7 +20,7 @@ class TowerfallObservation(ABC):
     raise NotImplementedError
 
   @abstractmethod
-  def post_step(self, player: Entity, entities: list[Entity], obs_dict: dict):
+  def post_step(self, player: Entity, entities: list[Entity], command: str, obs_dict: dict):
     '''Hook for a gym step call.'''
     raise NotImplementedError
 
@@ -38,6 +38,10 @@ class PlayerObservation(TowerfallObservation):
         raise Exception(f'Observation space already has {key}')
       obs_space_dict[key] = value
 
+    try_add_obs('prev_jump', spaces.Discrete(2))
+    try_add_obs('prev_dash', spaces.Discrete(2))
+    try_add_obs('prev_shoot', spaces.Discrete(2))
+
     try_add_obs('dodgeCooldown', spaces.Discrete(2))
     try_add_obs('dodging', spaces.Discrete(2))
     try_add_obs('facing', spaces.Discrete(2))
@@ -46,18 +50,21 @@ class PlayerObservation(TowerfallObservation):
     try_add_obs('vel', spaces.Box(low=-2, high=2, shape=(2,), dtype=np.float32))
 
   def post_reset(self, state_scenario: dict, player: Entity, entities: list[Entity], obs_dict: dict):
-    self._extend_obs(player, obs_dict)
+    self._extend_obs(player, '', obs_dict)
 
-  def post_step(self, player: Entity, entities: list[Entity], obs_dict):
-    self._extend_obs(player, obs_dict)
+  def post_step(self, player: Entity, entities: list[Entity], command: str, obs_dict):
+    self._extend_obs(player, command, obs_dict)
 
-  def _extend_obs(self, player: Entity, obs_dict: dict):
+  def _extend_obs(self, player: Entity, command: str, obs_dict: dict):
     '''Adds the new observations to obs_dict.'''
     def try_add_obs(key, value):
       if self.exclude and key in self.exclude:
         return
       obs_dict[key] = value
 
+    try_add_obs('prev_jump', int(JUMP in command))
+    try_add_obs('prev_dash', int(DASH in command))
+    try_add_obs('prev_shoot', int(SHOOT in command))
     try_add_obs('dodgeCooldown', int(player['dodgeCooldown']))
     try_add_obs('dodging', int(player['state']=='dodging'))
     try_add_obs('facing', (player['facing'] + 1) // 2) # -1,1 -> 0,1
@@ -82,7 +89,7 @@ class GridObservation(TowerfallObservation):
     self.gv.update(entities, player)
     self._extend_obs(obs_dict)
 
-  def post_step(self, player: Entity, entities: list[Entity], obs_dict: dict):
+  def post_step(self, player: Entity, entities: list[Entity], command: str, obs_dict: dict):
     self.gv.update(entities, player)
     self._extend_obs(obs_dict)
 

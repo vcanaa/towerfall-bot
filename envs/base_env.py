@@ -87,6 +87,7 @@ class TowerfallEnv(Env, ABC):
     assert state_update['type'] == 'update'
     self.entities = to_entities(state_update['entities'])
     self.me = self._get_own_archer(self.entities)
+    self.command = command
     return self._post_step()
 
   def _get_own_archer(self, entities: List[Entity]) -> Optional[Entity]:

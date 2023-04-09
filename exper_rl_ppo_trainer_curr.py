@@ -29,10 +29,9 @@ _HOST = '127.0.0.1'
 _PORT = 12024
 
 
-class SaveOnBestTrainingRewardCallback(BaseCallback):
+class SaveModelsCallback(BaseCallback):
   '''
-  Callback for saving a model (the check is done every ``check_freq`` steps)
-  based on the training reward (in practice, we recommend using ``EvalCallback``).
+  Callback for saving a models
 
   :param check_freq:
   :param log_dir: Path to the folder where the model will be saved.
@@ -40,7 +39,7 @@ class SaveOnBestTrainingRewardCallback(BaseCallback):
   :param verbose: Verbosity level: 0 for no output, 1 for info messages, 2 for debug messages
   '''
   def __init__(self, check_freq: int, log_dir: str, verbose: int = 1):
-    super(SaveOnBestTrainingRewardCallback, self).__init__(verbose)
+    super(SaveModelsCallback, self).__init__(verbose)
     self.check_freq = check_freq
     self.log_dir = log_dir
     self.save_path = os.path.join(log_dir, 'models')
@@ -63,15 +62,6 @@ class SaveOnBestTrainingRewardCallback(BaseCallback):
       if self.verbose >= 1:
         print(f'Num timesteps: {self.num_timesteps}')
         print(f'Best mean reward: {self.best_mean_reward:.2f} - Last mean reward per episode: {mean_reward:.2f}')
-
-      # # New best model, you could save the agent here
-      # if mean_reward > self.best_mean_reward:
-      #   self.best_mean_reward = mean_reward
-      #   # Example for saving best model
-      #   if self.verbose >= 1:
-      #     print(f'Saving new best model to {self.save_path}')
-      #     assert self.model
-      #     self.model.save(self.save_path)
 
       assert self.model
       model_path = os.path.join(self.save_path, str(self.n_calls))
@@ -131,34 +121,26 @@ def main(load_from=None, save_to=None):
       **configs['ppo_params'],
     )
 
-  best_rew_mean, rew_std = evaluate_policy(
-    model,
-    n_eval_episodes=len(objective.start_ends),
-    env=env,
-    deterministic=False)
+  # best_rew_mean, rew_std = evaluate_policy(
+  #   model,
+  #   n_eval_episodes=len(objective.start_ends),
+  #   env=env,
+  #   deterministic=False)
 
-  # configs['learn_params']['total_timesteps'] = objective.max_total_steps * 10
-  # logging.info('###############################################')
-  # logging.info(f"Starting to train for {configs['learn_params']['total_timesteps']} timesteps...")
+  configs['learn_params']['total_timesteps'] = objective.max_total_steps * 10
+  logging.info('###############################################')
+  logging.info(f"Starting to train for {configs['learn_params']['total_timesteps']} timesteps...")
 
-  # callback = SaveOnBestTrainingRewardCallback(check_freq=configs['ppo_params']['n_steps'], log_dir=log_dir)
+  callback = SaveModelsCallback(check_freq=configs['ppo_params']['n_steps'], log_dir=log_dir)
 
-  # with open(os.path.join(log_dir, 'hparams.json'), 'w') as file:
-  #   file.write(json.dumps(configs, indent=2))
-  # # while True:
-  # model.learn(
-  #   progress_bar=True,
-  #   callback=callback,
-  #   **configs['learn_params'])
-  # model.logger.dump()
-
-    # rew_mean, rew_std = evaluate_policy(model, env=env, deterministic = False)
-
-    # if rew_mean > best_rew_mean:
-    #   if save_to is not None:
-    #     os.makedirs(os.path.dirname(save_to), exist_ok=True)
-    #     logging.info(f'Saving model to {save_to}')
-    #     model.save(save_to)
+  with open(os.path.join(log_dir, 'hparams.json'), 'w') as file:
+    file.write(json.dumps(configs, indent=2))
+  # while True:
+  model.learn(
+    progress_bar=True,
+    callback=callback,
+    **configs['learn_params'])
+  model.logger.dump()
 
 
 if __name__ == '__main__':

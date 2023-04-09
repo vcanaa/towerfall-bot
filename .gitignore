@@ -3,7 +3,7 @@ __pycache__
 
 config*.json
 
-exper_*
+# exper_*
 
 data/
 ignore/

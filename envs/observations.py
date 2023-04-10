@@ -10,27 +10,31 @@ from typing import Sequence, Optional, Tuple
 
 
 class TowerfallObservation(ABC):
+  '''
+  Base class for observations.
+  '''
   @abstractmethod
   def extend_obs_space(self, obs_space_dict: dict[str, Space]):
+    '''Adds the new definitions to observations to obs_space.'''
     raise NotImplementedError()
 
   @abstractmethod
   def post_reset(self, state_scenario: dict, player: Entity, entities: list[Entity], obs_dict: dict):
-    '''Hook for a gym reset call.'''
+    '''Hook for a gym reset call. Adds observations to obs_dict.'''
     raise NotImplementedError
 
   @abstractmethod
   def post_step(self, player: Entity, entities: list[Entity], command: str, obs_dict: dict):
-    '''Hook for a gym step call.'''
+    '''Hook for a gym step call. Adds observations to obs_dict.'''
     raise NotImplementedError
 
 
 class PlayerObservation(TowerfallObservation):
+  '''Observation for the player state.'''
   def __init__(self, exclude: Optional[Sequence[str]] = None):
     self.exclude = exclude
 
   def extend_obs_space(self, obs_space_dict: dict[str, Space]):
-    '''Adds the new definitions to observations to obs_space.'''
     def try_add_obs(key, value):
       if self.exclude and key in self.exclude:
         return
@@ -56,7 +60,6 @@ class PlayerObservation(TowerfallObservation):
     self._extend_obs(player, command, obs_dict)
 
   def _extend_obs(self, player: Entity, command: str, obs_dict: dict):
-    '''Adds the new observations to obs_dict.'''
     def try_add_obs(key, value):
       if self.exclude and key in self.exclude:
         return

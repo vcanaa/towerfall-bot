@@ -13,6 +13,13 @@ from gym import Env
 
 
 class TowerfallEnv(Env, ABC):
+  '''
+  Interacts with the Towerfall.exe process to create an interface with the agent that follows the gym API.
+  Inherit from this class to choose the appropriate observations and reward functions.
+
+  param connection: The connection with the game.
+  param actions: The actions that the agent can take. If None, the default actions are used.
+  '''
   def __init__(self,
       connection: Connection,
       actions: Optional[TowerfallActions] = None):
@@ -26,28 +33,52 @@ class TowerfallEnv(Env, ABC):
     self.connection.read()
 
   def _is_reset_valid(self) -> bool:
-    '''Use this to make the reset environment is valid. If False is returned the environment will be reset again.'''
+    '''
+    Use this to make check if the initiallization is valid.
+    This is useful to collect information about the environment to programmatically construct a sequence of tasks, then
+    reset the environment again with the proper reseet instructions.
+
+    Returns:
+      True if the reset is valid, False otherwise, then the environment will be reset again.
+    '''
     return True
 
   def _send_reset(self):
-    '''Sends the reset instruction to the game. Overwrite this to change the start conditions.'''
+    '''
+    Sends the reset instruction to the game. Overwrite this to change the starting conditions.
+    '''
     self.connection.write_reset()
 
   @abstractmethod
-  def _post_reset(self):
-    '''Hook for a gym reset call.'''
+  def _post_reset(self) -> Tuple[NDArray, dict]:
+    '''
+    Hook for a gym reset call. Subclass should populate and return the same as a reset in gym API.
+
+    Returns:
+      A tuple of (observation, info)
+    '''
     raise NotImplementedError
 
   @abstractmethod
-  def _post_step(self) -> Tuple[NDArray, float, bool, object]:
-    '''Hook for a gym step call.'''
+  def _post_step(self) -> Tuple[NDArray, float, bool, dict]:
+    '''
+    Hook for a gym step call. Subclass should populate this to return the same as a step in gym API.
+
+    Returns:
+      A tuple of (observation, reward, done, info)
+    '''
     raise NotImplementedError
 
   def draws(self, draw_elem):
+    '''
+    Draws an element on the screen. This is useful for debugging.
+    '''
     self._draw_elems.append(draw_elem)
 
-  def reset(self) -> Tuple[NDArray, object]:
-    '''Gym reset'''
+  def reset(self) -> Tuple[NDArray, dict]:
+    '''
+    Gym reset. This is called by the agent to reset the environment.
+    '''
 
     while True:
       self._send_reset()
@@ -72,7 +103,9 @@ class TowerfallEnv(Env, ABC):
     return self._post_reset()
 
   def step(self, actions: NDArray) -> Tuple[NDArray, float, bool, object]:
-    '''Gym step'''
+    '''
+    Gym step. This is called by the agent to take an action in the environment.
+    '''
     command = self.actions._actions_to_command(actions)
 
     resp: dict[str, object] = {
@@ -91,7 +124,9 @@ class TowerfallEnv(Env, ABC):
     return self._post_step()
 
   def _get_own_archer(self, entities: List[Entity]) -> Optional[Entity]:
-    '''Iterates over all entities to find the archer that matches the index specified in init.'''
+    '''
+    Iterates over all entities to find the archer that matches the index specified in init.
+    '''
     for e in entities:
       if e.type == 'archer':
         if e['playerIndex'] == self.index:
@@ -102,5 +137,7 @@ class TowerfallEnv(Env, ABC):
     return json.loads(self.connection.read())
 
   def render(self, mode='human'):
-    '''This is a no-op since the game is rendered independenly by MonoGame/XNA'''
+    '''
+    This is a no-op since the game is rendered independenly by MonoGame/XNA.
+    '''
     pass

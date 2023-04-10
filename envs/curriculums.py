@@ -12,7 +12,7 @@ from .objectives import TowerfallObjective
 from typing import Tuple, Iterable
 
 
-class MyEncoder(json.JSONEncoder):
+class TaskEncoder(json.JSONEncoder):
   def default(self, obj):
     if isinstance(obj, Vec2):
       d = obj.dict()
@@ -20,7 +20,8 @@ class MyEncoder(json.JSONEncoder):
       return d
     return super().default(obj)
 
-class MyDecoder(json.JSONDecoder):
+
+class TaskDecoder(json.JSONDecoder):
   def __init__(self, *args, **kwargs):
     super().__init__(object_hook=self.object_hook, *args, **kwargs)
 
@@ -30,8 +31,16 @@ class MyDecoder(json.JSONDecoder):
       return Vec2(**dct)
     return dct
 
+
 class FollowCloseTargetCurriculum(TowerfallObjective):
-  '''Creates a series tasks where the agent needs to get to a closeby target.'''
+  '''
+  Creates a series of tasks where the agent needs to get to a near target.
+
+  param grid_view: Used to detect collisions when resetting the task.
+  param bounty: Reward received when reaching the location.
+  param episode_max_len: Amount of frames after which the episode ends.
+  param rew_dc: Agent loses this amount of reward per frame, in order to force it to get the target faster.
+  '''
   def __init__(self, grid_view: GridView, bounty=10, episode_max_len=90, rew_dc=2):
     self.gv = grid_view
     self.objective = FollowTargetObjective(grid_view, bounty, episode_max_len, rew_dc)
@@ -39,7 +48,7 @@ class FollowCloseTargetCurriculum(TowerfallObjective):
     self.initialized = True
     self.filename = 'tasks.json'
     with open(self.filename, 'r') as file:
-      self.start_ends = json.loads(file.read(), cls=MyDecoder)
+      self.start_ends = json.loads(file.read(), cls=TaskDecoder)
     random.shuffle(self.start_ends)
     # self.start_ends = self.start_ends[:5]
     self.max_total_steps = episode_max_len * len(self.start_ends)
@@ -71,7 +80,7 @@ class FollowCloseTargetCurriculum(TowerfallObjective):
 
     logging.info(f'Saving tasks to {self.filename}')
     with open(self.filename, 'w') as file:
-      file.write(json.dumps(self.start_ends, cls=MyEncoder))
+      file.write(json.dumps(self.start_ends, cls=TaskEncoder))
 
     random.shuffle(self.start_ends)
     self.initialized = True

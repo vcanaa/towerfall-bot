@@ -5,8 +5,10 @@ from common.constants import *
 from numpy.typing import NDArray
 
 class TowerfallActions:
-  '''Does conversion between gym actions and Towerfall API actions.
-  Allows enabling or disabling certain actions'''
+  '''
+  Does conversion between gym actions and Towerfall API actions.
+  Allows enabling or disabling certain actions.
+  '''
   def __init__(self,
       can_jump=True,
       can_dash=True,
@@ -30,6 +32,9 @@ class TowerfallActions:
     self.action_space = spaces.MultiDiscrete(actions)
 
   def _actions_to_command(self, actions: NDArray) -> str:
+    '''
+    Converts a list of actions to a command string.
+    '''
     command = ''
     if actions[0] == 0:
       command += LEFT

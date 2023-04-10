@@ -72,6 +72,9 @@ class FollowTargetObjective(TowerfallObjective):
     obs_dict['target'] = self.obs_target
 
   def _update_reward(self, player: Entity):
+    '''
+    Updates the reward and checks if the episode is done.
+    '''
     displ = self._get_target_displ(player)
     disp_len = displ.length()
     self.rew = self.prev_disp_len - disp_len
@@ -111,7 +114,9 @@ class FollowTargetObjective(TowerfallObjective):
     self.set_target(player, x, y)
 
   def _get_target_displ(self, player: Entity):
-    '''Gets the displacement of of the target from the player.'''
+    '''
+    Gets the displacement of the target from the player. This is a type of normalization where the player is at the origin.
+    '''
     displ = self.target.p.copy()
     displ.sub(player.p)
     return displ

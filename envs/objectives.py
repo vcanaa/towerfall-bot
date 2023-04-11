@@ -21,7 +21,7 @@ class TowerfallObjective(TowerfallObservation):
     self.rew: float
     self.env: TowerfallEnv
 
-  def is_reset_valid(self, state_scenario: dict, player: Entity, entities: list[Entity]) -> bool:
+  def is_reset_valid(self, state_scenario: dict, player: Optional[Entity], entities: list[Entity]) -> bool:
     return True
 
   def get_reset_instruction(self) -> dict:
@@ -34,13 +34,17 @@ class FollowTargetObjective(TowerfallObjective):
   Specifies observation and rewards associated with moving to a target location.
 
   :param grid_view: Used to detect collisions when resetting the target.
+  :param distance: Original distance from the target.
+  :param max_distance: When maximum distance from the target is reached the episode ends.
   :param bounty: Reward received when reaching the location
   :param episode_max_len: Amount of frames after which the episode ends
   :param rew_dc: Agent loses this amount of reward per frame, in order to force it to get the target faster
   '''
-  def __init__(self, grid_view: GridView, bounty: int=50, episode_max_len: int=60*2, rew_dc=1):
+  def __init__(self, grid_view: GridView, distance: float=8, max_distance:float=16, bounty: float=50, episode_max_len: int=60*2, rew_dc=1):
     super(FollowTargetObjective, self).__init__()
     self.gv = grid_view
+    self.distance = distance
+    self.max_distance = max_distance
     self.bounty = bounty
     self.episode_max_len = episode_max_len
     self.episode_len = 0
@@ -52,14 +56,21 @@ class FollowTargetObjective(TowerfallObjective):
       raise Exception('Observation space already has \'target\'')
     obs_space_dict['target'] = self.obs_space
 
-  def post_reset(self, state_scenario: dict, player: Entity, entities: list[Entity], obs_dict: dict, target: Optional[Tuple[float, float]] = None):
+  def post_reset(self, state_scenario: dict, player: Optional[Entity], entities: list[Entity], obs_dict: dict, target: Optional[Tuple[float, float]] = None):
+    if not player:
+      obs_dict['target'] = self.obs_target
+      return
+
     if target:
       self.set_target(player, *target)
     else:
       self._set_random_target(player)
     obs_dict['target'] = self.obs_target
 
-  def post_step(self, player: Entity, entities: list[Entity], command: str, obs_dict: dict):
+  def post_step(self, player: Optional[Entity], entities: list[Entity], command: str, obs_dict: dict):
+    if not player:
+      obs_dict['target'] = self.obs_target
+      return
     self._update_reward(player)
     self.episode_len += 1
     self.env.draws({
@@ -86,6 +97,9 @@ class FollowTargetObjective(TowerfallObjective):
     if self.episode_len > self.episode_max_len:
       self.done = True
       logging.info('Done. Timeout.')
+    if disp_len > self.max_distance:
+      self.done = True
+      logging.info(f'Done. Too far from target. {disp_len} > {self.max_distance}')
     self.prev_disp_len = disp_len
 
   def set_target(self, player: Entity, x, y):

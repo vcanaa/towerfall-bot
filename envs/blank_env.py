@@ -20,12 +20,14 @@ class TowerfallBlankEnv(TowerfallEnv):
       objective: TowerfallObjective,
       actions: Optional[TowerfallActions]=None):
     super(TowerfallBlankEnv, self).__init__(connection, actions)
+    print('Initializing TowerfallBlankEnv')
     obs_space = {}
     self.components = list(observations)
     self.components.append(objective)
     self.objective = objective
     self.objective.env = self
     for obs in self.components:
+      print('Extending obs space {type(obs)}')
       obs.extend_obs_space(obs_space)
     self.observation_space = spaces.Dict(obs_space)
     logging.info(str(self.observation_space))
@@ -40,7 +42,6 @@ class TowerfallBlankEnv(TowerfallEnv):
 
   def _post_reset(self) -> dict:
     obs_dict = {}
-    assert self.me
     for obs in self.components:
       obs.post_reset(self.state_scenario, self.me, self.entities, obs_dict)
     # logging.info(f"reset: {str(obs_dict)}")
@@ -48,7 +49,6 @@ class TowerfallBlankEnv(TowerfallEnv):
 
   def _post_step(self) -> Tuple[object, float, bool, object]:
     obs_dict = {}
-    assert self.me
     for obs in self.components:
       obs.post_step(self.me, self.entities, self.command, obs_dict)
     # logging.info(f"step: {str(obs_dict)}")

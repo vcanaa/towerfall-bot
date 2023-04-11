@@ -23,6 +23,7 @@ class TowerfallEnv(Env, ABC):
   def __init__(self,
       connection: Connection,
       actions: Optional[TowerfallActions] = None):
+    print('Initializing TowerfallEnv')
     self.connection = connection
     if actions:
       self.actions = actions
@@ -31,6 +32,7 @@ class TowerfallEnv(Env, ABC):
     self.action_space = self.actions.action_space
     self._draw_elems = []
     self.connection.read()
+    print('Initialized TowerfallEnv')
 
   def _is_reset_valid(self) -> bool:
     '''

@@ -9,8 +9,9 @@ data/
 ignore/
 logs/
 models/
-rl_models/
+optuna/
 replays/
+rl_models/
 runs/
 tensorboard/
 tmp/

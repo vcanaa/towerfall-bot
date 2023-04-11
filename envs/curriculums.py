@@ -1,6 +1,7 @@
 import logging
 import json
 import random
+import os
 
 from gym import Space
 
@@ -9,7 +10,7 @@ from common import GridView, Entity, Vec2, WIDTH, HEIGHT
 from .objectives import FollowTargetObjective
 from .objectives import TowerfallObjective
 
-from typing import Tuple, Iterable
+from typing import Tuple, Iterable, Optional
 
 
 class TaskEncoder(json.JSONEncoder):
@@ -34,24 +35,39 @@ class TaskDecoder(json.JSONDecoder):
 
 class FollowCloseTargetCurriculum(TowerfallObjective):
   '''
-  Creates a series of tasks where the agent needs to get to a near target.
+  Creates a series of episodes where the agent needs to get to a near target.
+  The starting positions are uniformly distributed around the empty spaces of the scenario.
 
-  param grid_view: Used to detect collisions when resetting the task.
-  param bounty: Reward received when reaching the location.
-  param episode_max_len: Amount of frames after which the episode ends.
-  param rew_dc: Agent loses this amount of reward per frame, in order to force it to get the target faster.
+  :param grid_view: Used to detect collisions when resetting the task.
+  :param distance: Original distance from the target.
+  :param max_distance: When maximum distance from the target is reached the episode ends.
+  :param bounty: Reward received when reaching the location.
+  :param episode_max_len: Amount of frames after which the episode ends.
+  :param rew_dc: Agent loses this amount of reward per frame, in order to force it to get the target faster.
   '''
-  def __init__(self, grid_view: GridView, bounty=10, episode_max_len=90, rew_dc=2):
+  def __init__(self, grid_view: GridView, distance=8, max_distance=16, bounty=10, episode_max_len=90, rew_dc=2):
+    print('FollowCloseTargetCurriculum')
     self.gv = grid_view
-    self.objective = FollowTargetObjective(grid_view, bounty, episode_max_len, rew_dc)
+    self.distance = distance
+    self.max_distance = max_distance
+    self.objective = FollowTargetObjective(grid_view, distance, max_distance, bounty, episode_max_len, rew_dc)
     self.task_idx = -1
-    self.initialized = True
     self.filename = 'tasks.json'
-    with open(self.filename, 'r') as file:
-      self.start_ends = json.loads(file.read(), cls=TaskDecoder)
-    random.shuffle(self.start_ends)
-    # self.start_ends = self.start_ends[:5]
-    self.max_total_steps = episode_max_len * len(self.start_ends)
+    self.initialized = False
+    if os.path.exists(self.filename):
+      with open(self.filename, 'r') as file:
+        self.start_ends = json.loads(file.read(), cls=TaskDecoder)
+      random.shuffle(self.start_ends)
+      self.initialized = True
+    # self.start_ends = self.start_ends[:1]
+    self.max_total_steps = episode_max_len * self.n_episodes
+    print('FollowCloseTargetCurriculum created')
+
+  @property
+  def n_episodes(self):
+    if not hasattr(self, 'start_ends'):
+      return 1
+    return len(self.start_ends)
 
   def is_reset_valid(self, state_scenario: dict, player: Entity, entities: list[Entity]) -> bool:
     if self.initialized:
@@ -101,11 +117,11 @@ class FollowCloseTargetCurriculum(TowerfallObjective):
     self.start, self.end = self.start_ends[self.task_idx]
     return dict(pos = self.start.dict())
 
-  def post_reset(self, state_scenario: dict, player: Entity, entities: list[Entity], obs_dict: dict):
+  def post_reset(self, state_scenario: dict, player: Optional[Entity], entities: list[Entity], obs_dict: dict):
     target = (self.end.x, self.end.y)
     self.objective.post_reset(state_scenario, player, entities, obs_dict, target)
 
-  def post_step(self, player: Entity, entities: list[Entity], command: str, obs_dict: dict):
+  def post_step(self, player: Optional[Entity], entities: list[Entity], command: str, obs_dict: dict):
     self.objective.post_step(player, entities, command, obs_dict)
     self.rew = self.objective.rew
     self.done = self.objective.done
@@ -117,9 +133,13 @@ class FollowCloseTargetCurriculum(TowerfallObjective):
         yield Vec2(x, y)
 
   def _pick_all_ends(self, start: Vec2) -> Iterable[Vec2]:
-    d = 30
-    for dx in range(-d, d + 1, 2 * d):
-      for dy in range(-d, d + 1, d):
-        yield Vec2(start.x + dx, start.y + dy)
-    for dy in range(-d, d + 1, 2*d):
-      yield Vec2(start.x, start.y + dy)
+    for dx in [-1, 1]:
+      for dy in range(-1, 2):
+        v = Vec2(dx, dy)
+        v.set_length(self.distance)
+        yield start + v
+
+    for dy in [-1, 1]:
+      v = Vec2(0, dy)
+      v.set_length(self.distance)
+      yield start + v

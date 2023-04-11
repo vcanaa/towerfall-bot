@@ -14,3 +14,4 @@ replays/
 runs/
 tensorboard/
 tmp/
+wandb/

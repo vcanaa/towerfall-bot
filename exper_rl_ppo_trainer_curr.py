@@ -5,9 +5,6 @@ import numpy as np
 import time
 import json
 
-from envs import TowerfallBlankEnv, GridObservation, PlayerObservation, FollowTargetObjective, FollowCloseTargetCurriculum
-from common import Connection, GridView
-
 try:
     import wandb
 except ImportError:
@@ -20,6 +17,9 @@ from stable_baselines3.common.evaluation import evaluate_policy
 from stable_baselines3.common.results_plotter import   ts2xy, plot_results
 from stable_baselines3.common.monitor import load_results, Monitor
 from stable_baselines3.common.callbacks import BaseCallback
+
+from envs import TowerfallBlankEnv, GridObservation, PlayerObservation, FollowTargetObjective, FollowCloseTargetCurriculum
+from common import Connection, GridView
 
 from typing import Any
 
@@ -78,14 +78,13 @@ class SaveModelsCallback(BaseCallback):
 def init_wandb(configs):
     assert wandb is not None, 'Please install wandb.'
     logging.debug('Starting wandb.')
-    wandb.tensorboard.patch(root_logdir=f"runs", tensorboard_x=True)
     run = wandb.init(
         project=configs['project_name'],
         name=configs['name'],
         id=configs['name'],
         tags=[],
         config=configs,
-        # sync_tensorboard=True,  # auto-upload sb3's tensorboard metrics
+        sync_tensorboard=True,  # auto-upload sb3's tensorboard metrics
         # monitor_gym=True,  # auto-upload the videos of agents playing the game
         save_code=True,  # optional
     )
@@ -98,7 +97,7 @@ def init_wandb(configs):
 def main(load_from=None, save_to=None, report_to=None):
   time_stamp = time.time_ns()//100000000
   experiment_name = f'sb3_ppo_example_{time_stamp}'
-  log_dir = f'tmp/{time_stamp}'
+  log_dir = f'logs/{experiment_name}'
   os.makedirs(log_dir, exist_ok=True)
 
   configs = dict[str, Any] (
@@ -123,9 +122,7 @@ def main(load_from=None, save_to=None, report_to=None):
 
   assert report_to in [None, 'wandb']
   if report_to == 'wandb':
-    run = init_wandb(configs)
-  else:
-    run = None
+    init_wandb(configs)
 
   connection = Connection(_HOST, _PORT)
 
@@ -138,11 +135,11 @@ def main(load_from=None, save_to=None, report_to=None):
       PlayerObservation()
     ],
     objective=objective)
-  env = Monitor(env)#, os.path.join(log_dir))
+  env = Monitor(env, os.path.join(log_dir))
   check_env(env)
 
   # default values for now 
-  configs['ppo_params']['n_steps'] = 512 #objective.max_total_steps
+  configs['ppo_params']['n_steps'] = 2048 #objective.max_total_steps
   configs['ppo_params']['batch_size'] = 64 # objective.max_total_steps
   if load_from is not None and os.path.exists(load_from):
     logging.info(f'Loading model from {load_from}')
@@ -150,14 +147,14 @@ def main(load_from=None, save_to=None, report_to=None):
     model.n_steps = configs['ppo_params']['n_steps']
     model.batch_size = configs['ppo_params']['batch_size']
   else:
-    logging.info(f'{run.id}')
     model = PPO(
       env=env,
       verbose=1,
-      tensorboard_log=f'runs/{run.id}', # required for wandb
+      tensorboard_log=os.path.join(log_dir, 'tensorboard'),
       **configs['ppo_params'],
     )
 
+  # TODO: evaluate policy
   # best_rew_mean, rew_std = evaluate_policy(
   #   model,
   #   n_eval_episodes=len(objective.start_ends),
@@ -174,7 +171,8 @@ def main(load_from=None, save_to=None, report_to=None):
     callback = \
        WandbCallback(
         gradient_save_freq=100,
-        model_save_path=f"models/{run.id}",
+        model_save_freq=100,
+        model_save_path=f"{log_dir}/models",
         verbose=2
       ) # type: ignore
   else:

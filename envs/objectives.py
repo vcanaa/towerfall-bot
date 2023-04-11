@@ -93,13 +93,13 @@ class FollowTargetObjective(TowerfallObjective):
       # Reached target. Gets big reward
       self.rew += self.bounty
       self.done = True
-      logging.info('Done. Reached target.')
+      # logging.info('Done. Reached target.')
     if self.episode_len > self.episode_max_len:
       self.done = True
-      logging.info('Done. Timeout.')
+      # logging.info('Done. Timeout.')
     if disp_len > self.max_distance:
       self.done = True
-      logging.info(f'Done. Too far from target. {disp_len} > {self.max_distance}')
+      # logging.info(f'Done. Too far from target. {disp_len} > {self.max_distance}')
     self.prev_disp_len = disp_len
 
   def set_target(self, player: Entity, x, y):

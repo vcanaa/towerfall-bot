@@ -36,9 +36,14 @@ class TowerfallBlankEnv(TowerfallEnv):
     assert self.me
     return self.objective.is_reset_valid(self.state_scenario, self.me, self.entities)
 
-  def _send_reset(self):
+  def _send_reset(self) -> bool:
     reset_inst = self.objective.get_reset_instruction()
+    if hasattr(self, 'state_scenario'):
+      self.connection.write_soft_reset(**reset_inst)
+      return False
+
     self.connection.write_reset(**reset_inst)
+    return True
 
   def _post_reset(self) -> dict:
     obs_dict = {}

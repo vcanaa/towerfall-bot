@@ -54,3 +54,6 @@ class Connection:
 
   def write_reset(self, pos: Optional[dict] = None):
     self.write_instruction('config', pos=pos)
+
+  def write_soft_reset(self, pos: Optional[dict] = None):
+    self.write_instruction('softReset', pos=pos)

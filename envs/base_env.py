@@ -1,4 +1,5 @@
 import json
+import logging
 
 from abc import ABC, abstractmethod
 
@@ -45,11 +46,14 @@ class TowerfallEnv(Env, ABC):
     '''
     return True
 
-  def _send_reset(self):
+  def _send_reset(self) -> bool:
     '''
     Sends the reset instruction to the game. Overwrite this to change the starting conditions.
+    Returns:
+      True if hard reset, False if soft reset.
     '''
     self.connection.write_reset()
+    return True
 
   @abstractmethod
   def _post_reset(self) -> Tuple[NDArray, dict]:
@@ -83,20 +87,21 @@ class TowerfallEnv(Env, ABC):
     '''
 
     while True:
-      self._send_reset()
+      is_hard_reset = self._send_reset()
 
-      state_init = self._read_game_state()
-      assert state_init['type'] == 'init'
-      self.index = state_init['index']
-      self.connection.write('.')
+      if is_hard_reset:
+        state_init = self._read_game_state()
+        assert state_init['type'] == 'init', state_init['type']
+        self.index = state_init['index']
+        self.connection.write('.')
+
+        self.state_scenario = self._read_game_state()
+        assert self.state_scenario['type'] == 'scenario', self.state_scenario['type']
+        self.connection.write('.')
+
       self.frame = 0
-
-      self.state_scenario = self._read_game_state()
-      assert self.state_scenario['type'] == 'scenario'
-      self.connection.write('.')
-
       state_update = self._read_game_state()
-      assert state_update['type'] == 'update'
+      assert state_update['type'] == 'update', state_update['type']
       self.entities = to_entities(state_update['entities'])
       self.me = self._get_own_archer(self.entities)
       if self._is_reset_valid():
@@ -136,6 +141,7 @@ class TowerfallEnv(Env, ABC):
     return None
 
   def _read_game_state(self):
+    # logging.info('Reading game state')
     return json.loads(self.connection.read())
 
   def render(self, mode='human'):

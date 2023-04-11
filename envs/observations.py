@@ -99,14 +99,23 @@ class GridObservation(TowerfallObservation):
       raise Exception('Observation space already has \'grid\'')
     obs_space_dict['grid'] = self.obs_space
 
-  def post_reset(self, state_scenario: dict, player: Entity, entities: list[Entity], obs_dict: dict):
+  def post_reset(self, state_scenario: dict, player: Optional[Entity], entities: list[Entity], obs_dict: dict):
     self.gv.set_scenario(state_scenario)
-    self.gv.update(entities, player)
+    self._update_grid(player, entities)
+
     self._extend_obs(obs_dict)
 
-  def post_step(self, player: Entity, entities: list[Entity], command: str, obs_dict: dict):
-    self.gv.update(entities, player)
+  def post_step(self, player: Optional[Entity], entities: list[Entity], command: str, obs_dict: dict):
+    self._update_grid(player, entities)
     self._extend_obs(obs_dict)
+
+  def _update_grid(self, player: Optional[Entity], entities: list[Entity]):
+    if player:
+      self.gv.update(entities, player)
+    else:
+      assert self.prev_player
+      self.gv.update(entities, self.prev_player)
+    self.prev_player = player
 
   def _extend_obs(self, obs_dict: dict):
     obs_dict['grid'] = self.gv.view(self.sight)

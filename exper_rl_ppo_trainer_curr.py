@@ -138,7 +138,7 @@ def main(load_from=None, save_to=None, report_to=None):
   env = Monitor(env, os.path.join(log_dir))
   check_env(env)
 
-  # default values for now 
+  # default values for now
   configs['ppo_params']['n_steps'] = 2048 #objective.max_total_steps
   configs['ppo_params']['batch_size'] = 64 # objective.max_total_steps
   if load_from is not None and os.path.exists(load_from):

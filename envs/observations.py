@@ -84,8 +84,9 @@ class PlayerObservation(TowerfallObservation):
     try_add_obs('onWall', int(player['onWall']))
     try_add_obs('vel', np.clip(player.v.numpy() / 5, -2, 2))
 
+
 class GridObservation(TowerfallObservation):
-  def __init__(self, grid_view: GridView, sight: Optional[Union[Tuple[int, int], int]] = None):
+  def __init__(self, grid_view: GridView, sight: Optional[Union[Tuple[int, int], int]] = None, add_grid: bool = True):
     self.gv = grid_view
     if isinstance(sight, int):
       sight = (sight, sight)

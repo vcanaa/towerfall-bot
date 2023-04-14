@@ -3,7 +3,7 @@ import json
 
 import logging
 
-from typing import Optional
+from typing import Optional, Callable
 
 _BYTE_ORDER = 'big'
 _ENCODING = 'ascii'
@@ -12,7 +12,10 @@ class Connection:
   def __init__(self, ip: str, port: int):
     self._socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     self._socket.connect((ip, port))
+    self._socket.settimeout(2)
+    self.port = port
     self.next_read = True
+    self.on_close: Callable
 
   def __del__(self):
     self.close()
@@ -22,6 +25,8 @@ class Connection:
       print('Closing socket')
       self._socket.close()
       del self._socket
+    if self.on_close:
+      self.on_close()
 
   def write(self, msg):
     if self.next_read:

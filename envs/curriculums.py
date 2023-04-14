@@ -52,7 +52,7 @@ class FollowCloseTargetCurriculum(TowerfallObjective):
     self.max_distance = max_distance
     self.objective = FollowTargetObjective(grid_view, distance, max_distance, bounty, episode_max_len, rew_dc)
     self.task_idx = -1
-    self.filename = 'tasks.json'
+    self.filename = f'FollowCloseTargetCurriculum_episodes_{distance}.json'
     self.initialized = False
     if os.path.exists(self.filename):
       with open(self.filename, 'r') as file:
@@ -134,7 +134,7 @@ class FollowCloseTargetCurriculum(TowerfallObjective):
 
   def _pick_all_ends(self, start: Vec2) -> Iterable[Vec2]:
     for dx in [-1, 1]:
-      for dy in range(-1, 2):
+      for dy in range(0, 2):
         v = Vec2(dx, dy)
         v.set_length(self.distance)
         yield start + v

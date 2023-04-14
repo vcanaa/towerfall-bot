@@ -170,9 +170,9 @@ def main(load_from=None, save_to=None, report_to=None):
     logging.info('Adding wandb callback.')
     callback = \
        WandbCallback(
-        gradient_save_freq=100,
-        model_save_freq=100,
-        model_save_path=f"{log_dir}/models",
+        # gradient_save_freq=100,
+        # model_save_freq=100,
+        # model_save_path=f"{log_dir}/models",
         verbose=2
       ) # type: ignore
   else:

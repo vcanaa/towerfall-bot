@@ -5,6 +5,10 @@ import numpy as np
 import time
 import json
 
+import wandb
+from wandb.wandb_run import Run
+from wandb.integration.sb3 import WandbCallback
+
 import optuna
 from optuna.trial import Trial
 from optuna.exceptions import TrialPruned
@@ -20,7 +24,7 @@ from stable_baselines3.common.results_plotter import   ts2xy, plot_results
 from stable_baselines3.common.monitor import load_results, Monitor
 from stable_baselines3.common.callbacks import BaseCallback
 
-from typing import Any
+from typing import Any, Optional, Union, Callable, Dict, List, Tuple
 
 class NoLevelFormatter(logging.Formatter):
   def format(self, record):
@@ -31,6 +35,29 @@ logging.getLogger().handlers[0].setFormatter(NoLevelFormatter())
 
 _HOST = '127.0.0.1'
 _PORT = 12024
+
+class GroupCallback(BaseCallback):
+  def __init__(self, callbacks: list[BaseCallback], verbose: int = 0):
+    super(GroupCallback, self).__init__(verbose)
+    self.callbacks = callbacks
+
+  def _init_callback(self) -> None:
+    assert self.model
+    for callback in self.callbacks:
+      callback.init_callback(self.model)
+
+  def _on_step(self) -> bool:
+    result = True
+    for callback in self.callbacks:
+      r = callback.on_step()
+      if not r:
+        result = False
+    return result
+
+  def _on_training_end(self) -> None:
+    for callback in self.callbacks:
+      callback.on_training_end()
+
 
 class TrainCallback(BaseCallback):
   '''
@@ -76,118 +103,188 @@ class TrainCallback(BaseCallback):
     return True
 
 
+def init_wandb(configs, project_name: str, name: str) -> Run:
+  logging.debug('Starting wandb.')
+  run = wandb.init(
+      project=project_name,
+      name=name,
+      tags=[],
+      config=configs,
+      sync_tensorboard=True,  # auto-upload sb3's tensorboard metrics
+      # monitor_gym=True,  # auto-upload the videos of agents playing the game
+      save_code=True,  # optional
+  )
+  assert type(run) is Run, f'Expected Run, got {type(run)}'
+  # if debug:
+      # wandb.watch(model, log='all', log_freq=1)
+  logging.info(f'Initialized wandb run {run.name}, id:{run.id}')
+  logging.debug('Finished loading wandb.')
+  return run
+
+
+def create_env(configs, connection: Connection) -> TowerfallBlankEnv:
+  grid_view = GridView(grid_factor=5)
+  objective = FollowCloseTargetCurriculum(grid_view, **configs['objective_params'])
+  print('CREATIN ENV')
+  env = TowerfallBlankEnv(
+    connection=connection,
+    observations= [
+      GridObservation(grid_view, **configs['grid_params']),
+      PlayerObservation()
+    ],
+    objective=objective)
+  print('ENV CREATED')
+  check_env(env)
+  return env
+
+
 def run_experiment(trial: Trial) -> float:
   print('STARTING EXPERIMENT')
-  n_steps = trial.suggest_int('ppo_params/n_steps', 200, 400, step=100)
-  max_distance = 20
+  # n_steps = trial.suggest_int('ppo_params/n_steps', 200, 400, step=100)
+  n_steps = trial.suggest_int('ppo_params/n_steps', 1024, 2048, step=1024)
+  max_distance = 40
   configs = dict[str, Any] (
     ppo_params= dict(
-      policy= 'MultiInputPolicy',
-      n_steps= n_steps,
-      batch_size= n_steps,
+      policy = 'MultiInputPolicy',
+      n_steps = n_steps,
+      batch_size = trial.suggest_int('ppo_params/batch_size', 64, 128, step=64),
+      # learning_rate= trial.suggest_float('ppo_params/learning_rate', 1e-4, 1e-2, log=True),
+      learning_rate= 1e-3,
       policy_kwargs= dict(
-        net_arch = [trial.suggest_int('ppo_params/layer_size', 128, 256, step=64)] * trial.suggest_int('ppo_params/depth', 1, 3)
+        # net_arch = [trial.suggest_int('ppo_params/layer_size', 128, 256, step=64)] * trial.suggest_int('ppo_params/depth', 1, 3)
+        net_arch = [256, 256]
       ),
     ),
     grid_params=dict(
       # sight= trial.suggest_int('grid_params/sight', 30, 60, step=10),
-      sight = trial.suggest_int('grid_params/sight', max_distance, 2*max_distance, step=8),
+      sight = trial.suggest_int('grid_params/sight', max_distance, 2*max_distance, step=max_distance),
     ),
     objective_params = dict(
       # bounty=trial.suggest_float('objective_params/bounty', 4, 8, step=2),
       bounty = 1,
-      distance = 8,
+      distance = 20,
       max_distance = max_distance,
-      episode_max_len=30,
+      episode_max_len=60,
       # rew_dc=trial.suggest_int('objective_params/rew_dc', 1, 2)
       rew_dc=1
     ),
     learn_params = dict()
   )
 
-  grid_view = GridView(grid_factor=5)
-  objective = FollowCloseTargetCurriculum(grid_view, **configs['objective_params'])
-  print('CREATIN ENV')
   connection = Connection(_HOST, _PORT)
   try:
-    env = TowerfallBlankEnv(
-      connection=connection,
-      observations= [
-        GridObservation(grid_view, **configs['grid_params']),
-        PlayerObservation()
-      ],
-      objective=objective)
-    print('ENV CREATED')
+    env = create_env(configs, connection)
 
-    log_dir = f'tmp/{time.time_ns()//100000000}'
+    log_dir = f'tmp/{trial.study.study_name}/{trial.number}'
     os.makedirs(log_dir, exist_ok=True)
 
-    env = Monitor(env, os.path.join(log_dir))
-    check_env(env)
+    monitored_env = Monitor(env, os.path.join(log_dir))
 
-    # configs['ppo_params']['n_steps'] = objective.max_total_steps
-    # configs['ppo_params']['batch_size'] = objective.max_total_steps
-
-    # if load_from is not None and os.path.exists(load_from):
-    #   logging.info(f'Loading model from {load_from}')
-    #   model = PPO.load(load_from, env = env)
-    #   model.n_steps = configs['ppo_params']['n_steps']
-    #   model.batch_size = configs['ppo_params']['batch_size']
-    # else:
     print('CREATING MODEL')
     model = PPO(
-      env=env,
+      env=monitored_env,
       verbose=1,
       tensorboard_log=os.path.join(log_dir, 'tensorboard'),
-
       **configs['ppo_params'],
     )
 
-    # best_rew_mean, rew_std = evaluate_policy(
-    #   model,
-    #   n_eval_episodes=len(objective.start_ends),
-    #   env=env,
-    #   deterministic=False)
-
-    configs['learn_params']['total_timesteps'] = max(n_steps * 10, objective.max_total_steps)
+    # configs['learn_params']['total_timesteps'] = max(n_steps * 10, objective.max_total_steps)
+    configs['learn_params']['total_timesteps'] = 400000
     logging.info('###############################################')
     logging.info(f"Starting to train for {configs['learn_params']['total_timesteps']} timesteps...")
 
-    callback = TrainCallback(
-      trial,
-      configs['ppo_params']['n_steps'],
-      objective.n_episodes,
-      log_dir=log_dir)
+    logging.info(f'Creating wandb run for trial {trial.study.study_name}/{trial.number}')
+    run: Run = init_wandb(configs, trial.study.study_name, f'trial_{trial.number}')
 
-    with open(os.path.join(log_dir, 'hparams.json'), 'w') as file:
-      file.write(json.dumps(configs, indent=2))
-    # while True:
-    print(f'PARAMS: {configs}')
-    print('LEARNING')
-    model = model.learn(
-      progress_bar=True,
-      callback=callback,
-      **configs['learn_params'])
-    model.logger.dump()
-    print('FINISHED')
-    return callback.best_mean_reward
+    assert isinstance(env.objective, FollowCloseTargetCurriculum)
+    try:
+      train_callback = TrainCallback(
+        trial,
+        configs['ppo_params']['n_steps'],
+        env.objective.n_episodes,
+        log_dir=log_dir)
+      wandb_callback = WandbCallback(
+          # gradient_save_freq=100,
+          # model_save_freq=100,
+          # model_save_path=f"{log_dir}/models",
+          verbose=2
+        )
+      callback = GroupCallback([train_callback, wandb_callback])
+
+      with open(os.path.join(log_dir, 'hparams.json'), 'w') as file:
+        file.write(json.dumps(configs, indent=2))
+
+      print(f'PARAMS: {configs}')
+      print('LEARNING')
+      model = model.learn(
+        progress_bar=True,
+        callback=callback,
+        **configs['learn_params'])
+      model.logger.dump()
+      print('FINISHED')
+    finally:
+      run.finish()
+      # pass
+    return train_callback.best_mean_reward
   finally:
     connection.close()
 
 
-def main(load_from=None, save_to=None):
+def evaluate(load_from: str):
+  logging.info(f'Loading experiment from {load_from}')
+  with open(os.path.join(load_from, 'hparams.json'), 'r') as file:
+    configs = json.load(file)
+
+  connection = Connection(_HOST, _PORT)
+  env = Monitor(create_env(configs, connection))
+
+  model_names = os.listdir(os.path.join(load_from, 'models'))
+  last_model = None
+  last_step = -1
+  for name in model_names:
+    if name == 'model.zip':
+      last_model = 'model.zip'
+      break
+    step = int(name.replace('.zip', ''))
+    if step > last_step:
+      last_step = step
+      last_model = name
+
+  last_model = os.path.join(load_from, 'models', last_model)
+  # last_model = os.path.abspath(last_model)
+
+  logging.info(f'Loading model from {last_model}')
+  model = PPO.load(last_model)
+
+  logging.info(f'Running evaluation for {last_model}')
+  logging.info('Deterministic=False')
+  evaluate_policy(model, env=env, n_eval_episodes=15, render=False, deterministic=False)
+  logging.info('Deterministic=True')
+  evaluate_policy(model, env=env, n_eval_episodes=15, render=False, deterministic=True)
+  logging.info(f'Finished evaluation for {last_model}')
+
+
+def main(load_from=None):
+  if load_from:
+    evaluate(load_from)
+    return
+
+  assert False, 'Not implemented'
+  wandb.login()
+
   # optuna_db = f'tmp/optuna/{time.time_ns()//100000000}'
   optuna_db = f'sqlite:///optuna/experiments.db'
   # os.makedirs(log_dir, exist_ok=True)
 
   study = optuna.create_study(
     storage=optuna_db,
-    study_name='no-name-d1bb728d-1d19-4b97-870a-430e1eaddca9',
+    # study_name=f'study_{time.time_ns()//100000000}',
+    study_name='study_16812733147',
     direction='maximize',
     # pruner=optuna.pruners.SuccessiveHalvingPruner()
     load_if_exists=True,
     )
-  study.optimize(run_experiment, n_trials=100, show_progress_bar=True)
+  study.optimize(run_experiment, n_trials=4, show_progress_bar=True)
   # study.save(os.path.join(log_dir, 'study.pkl'))
 
   print(f'Study name: {study.study_name}')
@@ -196,7 +293,6 @@ def main(load_from=None, save_to=None):
 if __name__ == '__main__':
   parser = argparse.ArgumentParser()
   parser.add_argument('--load-from', type=str, default=None)
-  parser.add_argument('--save-to', type=str, default='rl_models/test.model')
   args = parser.parse_args()
 
   main(**vars(args))

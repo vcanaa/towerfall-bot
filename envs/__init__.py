@@ -5,4 +5,3 @@ from .curriculums import *
 from .objectives import *
 from .observations import *
 from .connection_provider import *
-from .envmovement import *

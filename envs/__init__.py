@@ -4,4 +4,4 @@ from .blank_env import *
 from .curriculums import *
 from .objectives import *
 from .observations import *
-from .env_provider import *
+from .connection_provider import *

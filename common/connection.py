@@ -3,18 +3,22 @@ import json
 
 import logging
 
-from typing import Optional, Callable
+from typing import Callable
+
+from typing import Any
 
 _BYTE_ORDER = 'big'
 _ENCODING = 'ascii'
 
 class Connection:
-  def __init__(self, ip: str, port: int):
+  def __init__(self, ip: str, port: int, timeout=0, verbose=0, log_cap=50):
+    self.verbose = verbose
+    self.log_cap = log_cap
     self._socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     self._socket.connect((ip, port))
-    self._socket.settimeout(2)
+    if timeout:
+      self._socket.settimeout(timeout)
     self.port = port
-    self.next_read = True
     self.on_close: Callable
 
   def __del__(self):
@@ -22,43 +26,34 @@ class Connection:
 
   def close(self):
     if hasattr(self, '_socket'):
-      print('Closing socket')
+      if self.verbose > 0:
+        logging.info('Closing socket')
       self._socket.close()
       del self._socket
-    if self.on_close:
+    if hasattr(self, 'on_close'):
       self.on_close()
 
   def write(self, msg):
-    if self.next_read:
-      raise Exception('Write called before read.')
+    if self.verbose > 0:
+      logging.info('Writing: %s', self.cap(msg))
     size = len(msg)
     self._socket.sendall(size.to_bytes(2, byteorder=_BYTE_ORDER))
     self._socket.sendall(msg.encode(_ENCODING))
-    self.next_read = True
 
   def read(self):
-    if not self.next_read:
-      raise Exception('Read called before write.')
     header: bytes = self._socket.recv(2)
     size = int.from_bytes(header, _BYTE_ORDER)
     payload = self._socket.recv(size)
-    self.next_read = False
-    return payload.decode(_ENCODING)
+    resp = payload.decode(_ENCODING)
+    if self.verbose > 0:
+      logging.info('Read: %s', self.cap(resp))
+    return resp
 
-  def write_instruction(self, type: str, command: str ='', pos: Optional[dict] = None):
-    resp: dict['str', object] = {
-      'type': type,
-      'command': command
-    }
+  def read_json(self):
+    return json.loads(self.read())
 
-    if pos:
-      resp['pos'] = pos
-    # logging.info('pos: %s', pos)
-    # logging.info(resp)
-    self.write(json.dumps(resp))
+  def write_json(self, obj: dict[str, Any]):
+    self.write(json.dumps(obj))
 
-  def write_reset(self, pos: Optional[dict] = None):
-    self.write_instruction('config', pos=pos)
-
-  def write_soft_reset(self, pos: Optional[dict] = None):
-    self.write_instruction('softReset', pos=pos)
+  def cap(self, value: str) -> str:
+    return value[:self.log_cap] + '...' if len(value) > self.log_cap else value

@@ -121,13 +121,10 @@ class TowerfallProcessProvider:
     if not selected_process:
       logging.info(f'Starting new process {self.towerfall_path_exe}')
       process = Popen([self.towerfall_path_exe, '--noconfig'], cwd=self.towerfall_path)
-      selected_process = TowerfallProcess(process.pid, -1)
+      port = self._get_port(process.pid)
+      selected_process = TowerfallProcess(process.pid, port)
       self.processes.append(selected_process)
       self._save_state()
-      port = self._get_port(process.pid)
-      selected_process.port = port
-      self._save_state()
-
 
     selected_process.send_config(config)
     self._processes_in_use.add(selected_process.pid)

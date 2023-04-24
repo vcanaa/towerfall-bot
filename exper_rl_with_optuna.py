@@ -149,7 +149,7 @@ def run_experiment(trial: Trial) -> float:
       n_steps = n_steps,
       batch_size = trial.suggest_int('ppo_params/batch_size', 64, 128, step=64),
       # learning_rate= trial.suggest_float('ppo_params/learning_rate', 1e-4, 1e-2, log=True),
-      learning_rate= 1e-3,
+      learning_rate= 1e-5,
       policy_kwargs= dict(
         # net_arch = [trial.suggest_int('ppo_params/layer_size', 128, 256, step=64)] * trial.suggest_int('ppo_params/depth', 1, 3)
         net_arch = [256, 256]
@@ -183,7 +183,7 @@ def run_experiment(trial: Trial) -> float:
     print('CREATING MODEL')
     model = PPO(
       env=monitored_env,
-      verbose=1,
+      verbose=2,
       tensorboard_log=os.path.join(log_dir, 'tensorboard'),
       **configs['ppo_params'],
     )

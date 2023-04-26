@@ -56,16 +56,53 @@ def fill_grid(e: Entity, grid: NDArray, shouldLog = False):
       grid[0:x2, 0:y2] = 1
 
 
-def crop_grid(bot_left: Vec2, top_right: Vec2, grid: NDArray, shouldLog = False):
+def crop_grid(bot_left: Vec2, top_right: Vec2, grid: NDArray) -> NDArray:
   factor = WIDTH / grid.shape[0]
   if WIDTH % grid.shape[0] != 0:
     raise Exception('fillGrid requires factor to be integer: {}'.format(factor))
   if HEIGHT / grid.shape[1] != factor:
     raise Exception('Invalid aspect rate for grid: {}'.format(grid.shape))
-  x1 = int(bounded(bot_left.x // factor, 0, grid.shape[0]))
-  x2 = int(bounded(top_right.x // factor, 0, grid.shape[0]))
-  y1 = int(bounded(bot_left.y // factor, 0, grid.shape[1]))
-  y2 = int(bounded(top_right.y // factor, 0, grid.shape[1]))
+  x1 = int(bot_left.x // factor)
+  x2 = int(top_right.x // factor)
+  y1 = int(bot_left.y // factor)
+  y2 = int(top_right.y // factor)
+
+  # print(x1, y1, x2, y2)
+  # make region touch the grid
+  if x2 < 0:
+    x = x2 % grid.shape[0]
+    x1 += x - x2
+    x2 = x
+  if x1 >= grid.shape[0]:
+    x = x1 % grid.shape[0]
+    x2 += x - x1
+    x1 = x
+  if y2 < 0:
+    y = y2 % grid.shape[1]
+    y1 += y - y2
+    y2 = y
+  if y1 >= grid.shape[1]:
+    y = y1 % grid.shape[1]
+    y2 += y - y1
+    y1 = y
+
+  if x2 > grid.shape[0]:
+    x1 -= grid.shape[0]
+    x2 -= grid.shape[0]
+  if y2 > grid.shape[1]:
+    y1 -= grid.shape[1]
+    y2 -= grid.shape[1]
+
+  if x1 < 0:
+    if y1 < 0:
+      return np.concatenate([
+          np.concatenate([grid[x1:, y1:], grid[x1:, :y2]], axis=1),
+          np.concatenate([grid[:x2, y1:], grid[:x2, :y2]], axis=1),
+        ],
+        axis=0)
+    return np.concatenate([grid[x1:, y1:y2], grid[:x2, y1:y2]], axis=0)
+  if y1 < 0:
+    return np.concatenate([grid[x1:x2, y1:], grid[x1:x2, :y2]], axis=1)
   return grid[x1:x2, y1:y2]
 
 
@@ -77,6 +114,7 @@ class GridView():
     self.gf: int = grid_factor
 
   def set_scenario(self, game_state: dict):
+    # logging.info(f'Setting scenario in GridView {game_state["grid"]}')
     self.fixed_grid10 = np.array(game_state['grid'])
     self.csize: int = int(game_state['cellSize'])
     self.fixed_grid: NDArray = np.zeros((WIDTH // self.gf, HEIGHT // self.gf), dtype=np.int8)

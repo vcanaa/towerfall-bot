@@ -105,9 +105,9 @@ class FollowCloseTargetCurriculum(TowerfallObjective):
   def extend_obs_space(self, obs_space_dict: dict[str, Space]):
     self.objective.extend_obs_space(obs_space_dict)
 
-  def get_reset_instruction(self):
+  def get_reset_entities(self) -> Optional[list[dict]]:
     if not self.initialized:
-      return {}
+      return None
     self.objective.env = self.env
     self.task_idx += 1
     if self.task_idx == len(self.start_ends):
@@ -115,7 +115,7 @@ class FollowCloseTargetCurriculum(TowerfallObjective):
       # Restart from the first task.
       self.task_idx = 0
     self.start, self.end = self.start_ends[self.task_idx]
-    return dict(pos = self.start.dict())
+    return [dict(type='archer', pos=self.start.dict())]
 
   def post_reset(self, state_scenario: dict, player: Optional[Entity], entities: list[Entity], obs_dict: dict):
     target = (self.end.x, self.end.y)

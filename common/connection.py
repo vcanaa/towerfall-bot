@@ -11,7 +11,7 @@ _BYTE_ORDER = 'big'
 _ENCODING = 'ascii'
 
 class Connection:
-  def __init__(self, ip: str, port: int, timeout=0, verbose=0, log_cap=50):
+  def __init__(self, ip: str, port: int, timeout: float = 0, verbose=0, log_cap=50):
     self.verbose = verbose
     self.log_cap = log_cap
     self._socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -34,15 +34,18 @@ class Connection:
       self.on_close()
 
   def write(self, msg):
-    if self.verbose > 0:
-      logging.info('Writing: %s', self.cap(msg))
     size = len(msg)
+    if self.verbose > 0:
+      logging.info('Writing: %s %s', size, self.cap(msg))
+
     self._socket.sendall(size.to_bytes(2, byteorder=_BYTE_ORDER))
     self._socket.sendall(msg.encode(_ENCODING))
 
   def read(self):
     header: bytes = self._socket.recv(2)
     size = int.from_bytes(header, _BYTE_ORDER)
+    if self.verbose > 0:
+      logging.info('Reading %d bytes', size)
     payload = self._socket.recv(size)
     resp = payload.decode(_ENCODING)
     if self.verbose > 0:

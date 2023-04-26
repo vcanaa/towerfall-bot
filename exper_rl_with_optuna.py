@@ -13,7 +13,7 @@ import optuna
 from optuna.trial import Trial
 from optuna.exceptions import TrialPruned
 
-from envs import TowerfallBlankEnv, GridObservation, PlayerObservation, FollowTargetObjective, FollowCloseTargetCurriculum
+from envs import TowerfallBlankEnv, GridObservation, PlayerObservation, FollowTargetObjective, FollowCloseTargetCurriculum, TowerfallProcessProvider, TowerfallProcess
 from common import Connection, GridView
 
 from stable_baselines3 import PPO
@@ -35,28 +35,6 @@ logging.getLogger().handlers[0].setFormatter(NoLevelFormatter())
 
 _HOST = '127.0.0.1'
 _PORT = 12024
-
-class GroupCallback(BaseCallback):
-  def __init__(self, callbacks: list[BaseCallback], verbose: int = 0):
-    super(GroupCallback, self).__init__(verbose)
-    self.callbacks = callbacks
-
-  def _init_callback(self) -> None:
-    assert self.model
-    for callback in self.callbacks:
-      callback.init_callback(self.model)
-
-  def _on_step(self) -> bool:
-    result = True
-    for callback in self.callbacks:
-      r = callback.on_step()
-      if not r:
-        result = False
-    return result
-
-  def _on_training_end(self) -> None:
-    for callback in self.callbacks:
-      callback.on_training_end()
 
 
 class TrainCallback(BaseCallback):
@@ -122,12 +100,19 @@ def init_wandb(configs, project_name: str, name: str) -> Run:
   return run
 
 
-def create_env(configs, connection: Connection) -> TowerfallBlankEnv:
+def create_env(configs) -> TowerfallBlankEnv:
   grid_view = GridView(grid_factor=5)
   objective = FollowCloseTargetCurriculum(grid_view, **configs['objective_params'])
   print('CREATIN ENV')
+  towerfall_provider = TowerfallProcessProvider('default')
+  towerfall = towerfall_provider.get_process(dict(
+    mode='sandbox',
+    level='2',
+    fastrun=False,
+    agents=[dict(type='remote', team='blue', archer='green')]
+  ))
   env = TowerfallBlankEnv(
-    connection=connection,
+    towerfall=towerfall,
     observations= [
       GridObservation(grid_view, **configs['grid_params']),
       PlayerObservation()
@@ -171,63 +156,58 @@ def run_experiment(trial: Trial) -> float:
     learn_params = dict()
   )
 
-  connection = Connection(_HOST, _PORT)
+  env = create_env(configs)
+
+  log_dir = f'tmp/{trial.study.study_name}/{trial.number}'
+  os.makedirs(log_dir, exist_ok=True)
+
+  monitored_env = Monitor(env, os.path.join(log_dir))
+
+  print('CREATING MODEL')
+  model = PPO(
+    env=monitored_env,
+    verbose=2,
+    tensorboard_log=os.path.join(log_dir, 'tensorboard'),
+    **configs['ppo_params'],
+  )
+
+  # configs['learn_params']['total_timesteps'] = max(n_steps * 10, objective.max_total_steps)
+  configs['learn_params']['total_timesteps'] = 400000
+  logging.info('###############################################')
+  logging.info(f"Starting to train for {configs['learn_params']['total_timesteps']} timesteps...")
+
+  logging.info(f'Creating wandb run for trial {trial.study.study_name}/{trial.number}')
+  run: Run = init_wandb(configs, trial.study.study_name, f'trial_{trial.number}')
+
+  assert isinstance(env.objective, FollowCloseTargetCurriculum)
   try:
-    env = create_env(configs, connection)
+    train_callback = TrainCallback(
+      trial,
+      configs['ppo_params']['n_steps'],
+      env.objective.n_episodes,
+      log_dir=log_dir)
+    wandb_callback = WandbCallback(
+        # gradient_save_freq=100,
+        # model_save_freq=100,
+        # model_save_path=f"{log_dir}/models",
+        verbose=2
+      )
 
-    log_dir = f'tmp/{trial.study.study_name}/{trial.number}'
-    os.makedirs(log_dir, exist_ok=True)
+    with open(os.path.join(log_dir, 'hparams.json'), 'w') as file:
+      file.write(json.dumps(configs, indent=2))
 
-    monitored_env = Monitor(env, os.path.join(log_dir))
-
-    print('CREATING MODEL')
-    model = PPO(
-      env=monitored_env,
-      verbose=2,
-      tensorboard_log=os.path.join(log_dir, 'tensorboard'),
-      **configs['ppo_params'],
-    )
-
-    # configs['learn_params']['total_timesteps'] = max(n_steps * 10, objective.max_total_steps)
-    configs['learn_params']['total_timesteps'] = 400000
-    logging.info('###############################################')
-    logging.info(f"Starting to train for {configs['learn_params']['total_timesteps']} timesteps...")
-
-    logging.info(f'Creating wandb run for trial {trial.study.study_name}/{trial.number}')
-    run: Run = init_wandb(configs, trial.study.study_name, f'trial_{trial.number}')
-
-    assert isinstance(env.objective, FollowCloseTargetCurriculum)
-    try:
-      train_callback = TrainCallback(
-        trial,
-        configs['ppo_params']['n_steps'],
-        env.objective.n_episodes,
-        log_dir=log_dir)
-      wandb_callback = WandbCallback(
-          # gradient_save_freq=100,
-          # model_save_freq=100,
-          # model_save_path=f"{log_dir}/models",
-          verbose=2
-        )
-      callback = GroupCallback([train_callback, wandb_callback])
-
-      with open(os.path.join(log_dir, 'hparams.json'), 'w') as file:
-        file.write(json.dumps(configs, indent=2))
-
-      print(f'PARAMS: {configs}')
-      print('LEARNING')
-      model = model.learn(
-        progress_bar=True,
-        callback=callback,
-        **configs['learn_params'])
-      model.logger.dump()
-      print('FINISHED')
-    finally:
-      run.finish()
-      # pass
-    return train_callback.best_mean_reward
+    print(f'PARAMS: {configs}')
+    print('LEARNING')
+    model = model.learn(
+      progress_bar=True,
+      callback=[train_callback, wandb_callback],
+      **configs['learn_params'])
+    model.logger.dump()
+    print('FINISHED')
   finally:
-    connection.close()
+    run.finish()
+    # pass
+  return train_callback.best_mean_reward
 
 
 def evaluate(load_from: str):
@@ -235,8 +215,7 @@ def evaluate(load_from: str):
   with open(os.path.join(load_from, 'hparams.json'), 'r') as file:
     configs = json.load(file)
 
-  connection = Connection(_HOST, _PORT)
-  env = Monitor(create_env(configs, connection))
+  env = Monitor(create_env(configs))
 
   model_names = os.listdir(os.path.join(load_from, 'models'))
   last_model = None
@@ -269,7 +248,6 @@ def main(load_from=None):
     evaluate(load_from)
     return
 
-  assert False, 'Not implemented'
   wandb.login()
 
   # optuna_db = f'tmp/optuna/{time.time_ns()//100000000}'

@@ -24,7 +24,7 @@ class TowerfallObjective(TowerfallObservation):
   def is_reset_valid(self, state_scenario: dict, player: Optional[Entity], entities: list[Entity]) -> bool:
     return True
 
-  def get_reset_instruction(self) -> dict:
+  def get_reset_entities(self) -> list[dict]:
     '''Specifies how the environment needs to be reset.'''
     return {}
 
@@ -93,13 +93,13 @@ class FollowTargetObjective(TowerfallObjective):
       # Reached target. Gets big reward
       self.rew += self.bounty
       self.done = True
-      # logging.info('Done. Reached target.')
+      logging.info('Done. Reached target.')
     if self.episode_len > self.episode_max_len:
       self.done = True
-      # logging.info('Done. Timeout.')
+      logging.info('Done. Timeout.')
     if disp_len > self.max_distance:
       self.done = True
-      # logging.info(f'Done. Too far from target. {disp_len} > {self.max_distance}')
+      logging.info(f'Done. Too far from target. {disp_len} > {self.max_distance}')
     self.prev_disp_len = disp_len
 
   def set_target(self, player: Entity, x, y):

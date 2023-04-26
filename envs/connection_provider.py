@@ -5,7 +5,6 @@ import signal
 import logging
 import time
 
-from copy import deepcopy
 from subprocess import Popen, PIPE
 
 from common import Connection
@@ -37,8 +36,8 @@ class TowerfallProcess:
       config=self.config
     )
 
-  def join(self) -> Connection:
-    connection = Connection(_HOST, self.port, timeout=2)
+  def join(self, timeout: float = 2, verbose=0) -> Connection:
+    connection = Connection(_HOST, self.port, timeout, verbose)
     connection.write_json(dict(type='join'))
     resp = connection.read_json()
     if resp['type'] != 'result':
@@ -52,16 +51,19 @@ class TowerfallProcess:
     connection.on_close = on_close
     return connection
 
-  def send_reset(self, entities):
-    resp = self.send_request_json(dict(type='reset', entities=entities), timeout=2)
+  def send_reset(self, entities: Optional[list[dict]] = None, timeout: float = 2, verbose=0):
+    resp = self.send_request_json(dict(type='reset', entities=entities), timeout, verbose)
     if resp['type'] != 'result':
       raise Exception(f'Unexpected response type: {resp["type"]}')
     if not resp['success']:
       raise Exception(f'Failed to reset process {self.pid}: {resp["message"]}')
     logging.info(f'Successfully reset process {self.pid}')
 
-  def send_config(self, config):
-    resp = self.send_request_json(dict(type='config', config=config), timeout=2)
+  def send_config(self, config = None, timeout: float = 2, verbose=0):
+    if not config:
+      config = self.config
+
+    resp = self.send_request_json(dict(type='config', config=config), timeout, verbose)
     if resp['type'] != 'result':
       raise Exception(f'Unexpected response type: {resp["type"]}')
     if not resp['success']:
@@ -69,8 +71,8 @@ class TowerfallProcess:
     logging.info(f'Successfully applied config to process {self.pid}')
     self.config = config
 
-  def send_request_json(self, obj: dict[str, Any], timeout=0):
-    connection = Connection(_HOST, self.port, timeout=timeout)
+  def send_request_json(self, obj: dict[str, Any], timeout: float = 2, verbose=0):
+    connection = Connection(_HOST, self.port, timeout, verbose)
     connection.write_json(obj)
     return connection.read_json()
 
@@ -110,7 +112,7 @@ class TowerfallProcessProvider:
       ]
     )
 
-  def get_process(self, config = None) -> TowerfallProcess:
+  def get_process(self, config = None, verbose=0) -> TowerfallProcess:
     if not config:
       config = self.default_config
 
@@ -126,7 +128,7 @@ class TowerfallProcessProvider:
       self.processes.append(selected_process)
       self._save_state()
 
-    selected_process.send_config(config)
+    selected_process.send_config(config, verbose=verbose)
     self._processes_in_use.add(selected_process.pid)
     self._save_state()
     return selected_process

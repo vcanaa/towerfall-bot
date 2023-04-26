@@ -6,8 +6,9 @@ from abc import ABC, abstractmethod
 from common import Connection, Entity, to_entities
 
 from .actions import TowerfallActions
+from .connection_provider import TowerfallProcess
 
-from typing import List, Optional, Tuple
+from typing import List, Optional, Tuple, Any
 from numpy.typing import NDArray
 
 from gym import Env
@@ -22,17 +23,20 @@ class TowerfallEnv(Env, ABC):
   param actions: The actions that the agent can take. If None, the default actions are used.
   '''
   def __init__(self,
-      connection: Connection,
-      actions: Optional[TowerfallActions] = None):
+      towerfall: TowerfallProcess,
+      actions: Optional[TowerfallActions] = None,
+      verbose: int = 0):
     print('Initializing TowerfallEnv')
-    self.connection = connection
+    self.towerfall = towerfall
+    self.verbose = verbose
+    self.connection = self.towerfall.join(timeout=5, verbose=self.verbose)
     if actions:
       self.actions = actions
     else:
       self.actions = TowerfallActions()
     self.action_space = self.actions.action_space
     self._draw_elems = []
-    self.connection.read()
+    self.is_init_sent = False
     print('Initialized TowerfallEnv')
 
   def _is_reset_valid(self) -> bool:
@@ -46,14 +50,13 @@ class TowerfallEnv(Env, ABC):
     '''
     return True
 
-  def _send_reset(self) -> bool:
+  def _send_reset(self):
     '''
     Sends the reset instruction to the game. Overwrite this to change the starting conditions.
     Returns:
       True if hard reset, False if soft reset.
     '''
-    self.connection.write_reset()
-    return True
+    self.towerfall.send_reset(verbose=self.verbose)
 
   @abstractmethod
   def _post_reset(self) -> Tuple[NDArray, dict]:
@@ -85,24 +88,26 @@ class TowerfallEnv(Env, ABC):
     '''
     Gym reset. This is called by the agent to reset the environment.
     '''
-
+    logging.info('Resetting environment')
     while True:
-      is_hard_reset = self._send_reset()
-
-      if is_hard_reset:
-        state_init = self._read_game_state()
+      self._send_reset()
+      if not self.is_init_sent:
+        state_init = self.connection.read_json()
         assert state_init['type'] == 'init', state_init['type']
         self.index = state_init['index']
-        self.connection.write('.')
+        self.connection.write_json(dict(type='result', success=True))
 
-        self.state_scenario = self._read_game_state()
+        self.state_scenario = self.connection.read_json()
         assert self.state_scenario['type'] == 'scenario', self.state_scenario['type']
-        self.connection.write('.')
+        self.connection.write_json(dict(type='result', success=True))
+        self.is_init_sent = True
+      else:
+        self.connection.write_json(dict(type='commands', command="", id=self.state_update['id']))
 
       self.frame = 0
-      state_update = self._read_game_state()
-      assert state_update['type'] == 'update', state_update['type']
-      self.entities = to_entities(state_update['entities'])
+      self.state_update = self.connection.read_json()
+      assert self.state_update['type'] == 'update', self.state_update['type']
+      self.entities = to_entities(self.state_update['entities'])
       self.me = self._get_own_archer(self.entities)
       if self._is_reset_valid():
         break
@@ -115,17 +120,18 @@ class TowerfallEnv(Env, ABC):
     '''
     command = self.actions._actions_to_command(actions)
 
-    resp: dict[str, object] = {
-      'type': 'command',
-      'command': command,
-    }
-    if self._draw_elems:
-      resp['draws'] = self._draw_elems
-    self.connection.write(json.dumps(resp))
+    resp: dict[str, Any] = dict(
+      type='commands',
+      command=command,
+      id=self.state_update['id']
+    )
+    # if self._draw_elems:
+    #   resp['draws'] = self._draw_elems
+    self.connection.write_json(resp)
     self._draw_elems.clear()
-    state_update = self._read_game_state()
-    assert state_update['type'] == 'update'
-    self.entities = to_entities(state_update['entities'])
+    self.state_update = self.connection.read_json()
+    assert self.state_update['type'] == 'update'
+    self.entities = to_entities(self.state_update['entities'])
     self.me = self._get_own_archer(self.entities)
     self.command = command
     return self._post_step()
@@ -140,9 +146,10 @@ class TowerfallEnv(Env, ABC):
           return e
     return None
 
-  def _read_game_state(self):
-    # logging.info('Reading game state')
-    return json.loads(self.connection.read())
+  # def _read_game_state(self):
+  #   # logging.info('Reading game state')
+  #   self.connection.read_json()
+  #   return json.loads(self.connection.read())
 
   def render(self, mode='human'):
     '''

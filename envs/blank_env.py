@@ -2,12 +2,11 @@ import logging
 
 from gym import spaces
 
-from common import Connection
-
 from .base_env import TowerfallEnv
 from .actions import TowerfallActions
 from .observations import TowerfallObservation
 from .objectives import TowerfallObjective
+from .connection_provider import TowerfallProcess
 
 from typing import Tuple, Optional
 
@@ -15,11 +14,12 @@ from typing import Tuple, Optional
 class TowerfallBlankEnv(TowerfallEnv):
   '''A blank environment that can be customized with the addition of observations and an objective.'''
   def __init__(self,
-      connection: Connection,
+      towerfall: TowerfallProcess,
       observations: list[TowerfallObservation],
       objective: TowerfallObjective,
-      actions: Optional[TowerfallActions]=None):
-    super(TowerfallBlankEnv, self).__init__(connection, actions)
+      actions: Optional[TowerfallActions]=None,
+      verbose: int = 0):
+    super(TowerfallBlankEnv, self).__init__(towerfall, actions, verbose)
     print('Initializing TowerfallBlankEnv')
     obs_space = {}
     self.components = list(observations)
@@ -27,7 +27,6 @@ class TowerfallBlankEnv(TowerfallEnv):
     self.objective = objective
     self.objective.env = self
     for obs in self.components:
-      print('Extending obs space {type(obs)}')
       obs.extend_obs_space(obs_space)
     self.observation_space = spaces.Dict(obs_space)
     logging.info(str(self.observation_space))
@@ -36,14 +35,9 @@ class TowerfallBlankEnv(TowerfallEnv):
     assert self.me
     return self.objective.is_reset_valid(self.state_scenario, self.me, self.entities)
 
-  def _send_reset(self) -> bool:
-    reset_inst = self.objective.get_reset_instruction()
-    if hasattr(self, 'state_scenario'):
-      self.connection.write_soft_reset(**reset_inst)
-      return False
-
-    self.connection.write_reset(**reset_inst)
-    return True
+  def _send_reset(self):
+    reset_entities = self.objective.get_reset_entities()
+    self.towerfall.send_reset(reset_entities, verbose=self.verbose)
 
   def _post_reset(self) -> dict:
     obs_dict = {}

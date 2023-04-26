@@ -55,6 +55,7 @@ def join(towerfall: TowerfallProcess, agent_count: int) -> list[Connection]:
 
 def reset(towerfall: TowerfallProcess, agent_count: int) -> list[dict]:
   entities = [dict(type='archer', pos=dict(x=_starting_x[i], y=85)) for i in range(agent_count)]
+  entities.append(dict(type='slime', pos=dict(x=160, y=85)))
   towerfall.send_reset(entities)
   return entities
 
@@ -82,15 +83,15 @@ def receive_update(connections: list[Connection], entities: list[dict], length: 
         pos = [e['pos'] for e in state_update['entities'] if e['type'] == 'archer' and e['playerIndex']==i][0]
         diff = abs(pos['x'] - entities[i]['pos']['x'])
         assert diff < 2, f"{pos['x']} != {entities[i]['pos']['x']}, diff = {diff}"
-      connections[i].write_json(dict(type='commands', command=get_random_command()))
+      connections[i].write_json(dict(type='commands', command=get_random_command(), id=state_update['id']))
 
 
 def run_many_resets(towerfall: TowerfallProcess, agent_count: int, reset_count: int):
-  entities = reset(towerfall, agent_count)
   connections = join(towerfall, agent_count)
+  entities = reset(towerfall, agent_count)
 
   receive_init(connections)
-  receive_update(connections, entities, length=300)
+  receive_update(connections, entities, length=150)
 
   for i in range(reset_count):
     entities = reset(towerfall, agent_count)

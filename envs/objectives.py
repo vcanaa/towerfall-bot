@@ -26,7 +26,7 @@ class TowerfallObjective(TowerfallObservation):
 
   def get_reset_entities(self) -> list[dict]:
     '''Specifies how the environment needs to be reset.'''
-    return {}
+    return []
 
 
 class FollowTargetObjective(TowerfallObjective):
@@ -40,7 +40,7 @@ class FollowTargetObjective(TowerfallObjective):
   :param episode_max_len: Amount of frames after which the episode ends
   :param rew_dc: Agent loses this amount of reward per frame, in order to force it to get the target faster
   '''
-  def __init__(self, grid_view: GridView, distance: float=8, max_distance:float=16, bounty: float=50, episode_max_len: int=60*2, rew_dc=1):
+  def __init__(self, grid_view: Optional[GridView], distance: float=8, max_distance:float=16, bounty: float=50, episode_max_len: int=60*2, rew_dc=1):
     super(FollowTargetObjective, self).__init__()
     self.gv = grid_view
     self.distance = distance
@@ -68,38 +68,42 @@ class FollowTargetObjective(TowerfallObjective):
     obs_dict['target'] = self.obs_target
 
   def post_step(self, player: Optional[Entity], entities: list[Entity], command: str, obs_dict: dict):
-    if not player:
-      obs_dict['target'] = self.obs_target
-      return
     self._update_reward(player)
     self.episode_len += 1
-    self.env.draws({
-      'type': 'line',
-      'start': player['pos'],
-      'end': self.target['pos'],
-      'color': [1,1,1],
-      'thick': 4
-    })
+    if player:
+      self.env.draws({
+        'type': 'line',
+        'start': player['pos'],
+        'end': self.target['pos'],
+        'color': [1,1,1],
+        'thick': 4
+      })
     obs_dict['target'] = self.obs_target
 
-  def _update_reward(self, player: Entity):
+  def _update_reward(self, player: Optional[Entity]):
     '''
     Updates the reward and checks if the episode is done.
     '''
+    if not player:
+      self.done = True
+      self.rew = 0
+      return
+
     displ = self._get_target_displ(player)
+    self.obs_target = np.array([displ.x / HW, displ.y / HH], dtype=np.float32)
     disp_len = displ.length()
     self.rew = self.prev_disp_len - disp_len
     if disp_len < player.s.y / 2:
       # Reached target. Gets big reward
       self.rew += self.bounty
       self.done = True
-      logging.info('Done. Reached target.')
+      # logging.info('Done. Reached target.')
     if self.episode_len > self.episode_max_len:
       self.done = True
-      logging.info('Done. Timeout.')
+      # logging.info('Done. Timeout.')
     if disp_len > self.max_distance:
       self.done = True
-      logging.info(f'Done. Too far from target. {disp_len} > {self.max_distance}')
+      # logging.info(f'Done. Too far from target. {disp_len} > {self.max_distance}')
     self.prev_disp_len = disp_len
 
   def set_target(self, player: Entity, x, y):
@@ -111,12 +115,15 @@ class FollowTargetObjective(TowerfallObjective):
       'type': 'fake'
     })
     displ = self._get_target_displ(player)
-    self.obs_target: NDArray = np.array([displ.x / HW, displ.y / HH], dtype=np.float32)
+    # logging.info('Target displ: {}'.format(displ))
+    self.obs_target = np.array([displ.x / HW, displ.y / HH], dtype=np.float32)
     self.prev_disp_len = displ.length()
     self.done = False
     self.episode_len = 0
 
   def _set_random_target(self, player: Entity):
+    assert self.gv, 'GridView required by _set_random_target.'
+
     while True:
       x = random.randint(0, WIDTH)
       y = random.randint(0, HEIGHT)

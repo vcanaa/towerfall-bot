@@ -11,9 +11,10 @@ _BYTE_ORDER = 'big'
 _ENCODING = 'ascii'
 
 class Connection:
-  def __init__(self, ip: str, port: int, timeout: float = 0, verbose=0, log_cap=50):
+  def __init__(self, ip: str, port: int, timeout: float = 0, verbose=0, log_cap=50, record_path=None):
     self.verbose = verbose
     self.log_cap = log_cap
+    self.record_path = record_path
     self._socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     self._socket.connect((ip, port))
     if timeout:
@@ -40,17 +41,28 @@ class Connection:
 
     self._socket.sendall(size.to_bytes(2, byteorder=_BYTE_ORDER))
     self._socket.sendall(msg.encode(_ENCODING))
+    if self.record_path:
+      with open(self.record_path, 'a') as file:
+        file.write(msg + '\n')
 
   def read(self):
-    header: bytes = self._socket.recv(2)
-    size = int.from_bytes(header, _BYTE_ORDER)
-    if self.verbose > 0:
-      logging.info('Reading %d bytes', size)
-    payload = self._socket.recv(size)
-    resp = payload.decode(_ENCODING)
-    if self.verbose > 0:
-      logging.info('Read: %s', self.cap(resp))
-    return resp
+    try:
+      header: bytes = self._socket.recv(2)
+      size = int.from_bytes(header, _BYTE_ORDER)
+      if self.verbose > 0:
+        logging.info('Reading %d bytes', size)
+      payload = self._socket.recv(size)
+      resp = payload.decode(_ENCODING)
+      if self.verbose > 0:
+        logging.info('Read: %s', self.cap(resp))
+      if self.record_path:
+        with open(self.record_path, 'a') as file:
+          file.write(resp + '\n')
+      return resp
+    except socket.timeout as ex:
+      logging.error(f'Socket timeout {self._socket.getsockname()}')
+      raise ex
+
 
   def read_json(self):
     return json.loads(self.read())

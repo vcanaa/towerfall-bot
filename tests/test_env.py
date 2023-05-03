@@ -7,8 +7,6 @@ from envs import TowerfallBlankEnv, FollowCloseTargetCurriculum, GridObservation
 
 from common import GridView
 
-from stable_baselines3.common.env_checker import check_env
-
 from typing import Any
 
 class NoLevelFormatter(logging.Formatter):
@@ -22,10 +20,9 @@ def create_env(configs) -> TowerfallBlankEnv:
   grid_view = GridView(grid_factor=5)
   objective = FollowCloseTargetCurriculum(grid_view, **configs['objective_params'])
   towerfall_provider = TowerfallProcessProvider('default')
-  towerfall = towerfall_provider.get_process(dict(
+  towerfall = towerfall_provider.get_process(config=dict(
     mode='sandbox',
     level='2',
-    fastrun=False,
     agents=[dict(type='remote', team='blue', archer='green')]
   ), verbose=1)
   env = TowerfallBlankEnv(
@@ -35,6 +32,7 @@ def create_env(configs) -> TowerfallBlankEnv:
       PlayerObservation()
     ],
     objective=objective,
+    actions=
     verbose=1)
   # check_env(env)
   return env

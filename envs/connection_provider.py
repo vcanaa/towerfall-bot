@@ -23,9 +23,11 @@ class TowerfallProcess:
   params port: The port that the Towerfall process is listening on.
   params config: The current configuration of the Towerfall process.
   '''
-  def __init__(self, pid: int, port: int, config: dict[str, Any] = {}):
+  def __init__(self, pid: int, port: int, fastrun: bool, nographics: bool, config: dict[str, Any] = {}):
     self.pid = pid
     self.port = port
+    self.fastrun = fastrun
+    self.nographics = nographics
     self.config: dict[str, Any] = config
     self.connections: list[Connection] = []
 
@@ -33,6 +35,8 @@ class TowerfallProcess:
     return dict(
       pid=self.pid,
       port=self.port,
+      fastrun=self.fastrun,
+      nographics=self.nographics,
       config=self.config
     )
 
@@ -57,7 +61,8 @@ class TowerfallProcess:
       raise Exception(f'Unexpected response type: {resp["type"]}')
     if not resp['success']:
       raise Exception(f'Failed to reset process {self.pid}: {resp["message"]}')
-    logging.info(f'Successfully reset process {self.pid}')
+    if verbose > 0:
+      logging.info(f'Successfully reset process {self.pid}')
 
   def send_config(self, config = None, timeout: float = 2, verbose=0):
     if not config:
@@ -112,23 +117,42 @@ class TowerfallProcessProvider:
       ]
     )
 
-  def get_process(self, config = None, verbose=0) -> TowerfallProcess:
+  def get_process(self, fastrun: bool = False, nographics: bool = False, config = None, verbose=0) -> TowerfallProcess:
     if not config:
       config = self.default_config
 
-    # Try to find an existing process that is not in use
-    selected_process = next((p for p in self.processes if p.pid not in self._processes_in_use), None)
+    selected_process = None
+    while not selected_process:
+      # Try to find an existing process that is not in use
+      def is_suitable_process(process: TowerfallProcess):
+        if process.fastrun != fastrun:
+          return False
+        if process.nographics != nographics:
+          return False
+        if process.pid in self._processes_in_use:
+          return False
+        return True
+      selected_process = next((p for p in self.processes if is_suitable_process(p)), None)
 
-    # If no process was found, start a new one
-    if not selected_process:
-      logging.info(f'Starting new process {self.towerfall_path_exe}')
-      process = Popen([self.towerfall_path_exe, '--noconfig'], cwd=self.towerfall_path)
-      port = self._get_port(process.pid)
-      selected_process = TowerfallProcess(process.pid, port)
-      self.processes.append(selected_process)
-      self._save_state()
+      # If no process was found, start a new one
+      if not selected_process:
+        logging.info(f'Starting new process {self.towerfall_path_exe}')
+        pargs = [self.towerfall_path_exe, '--noconfig']
+        if fastrun:
+          pargs.append('--fastrun')
+        if nographics:
+          pargs.append('--nographics')
+        process = Popen(pargs, cwd=self.towerfall_path)
+        port = self._get_port(process.pid)
+        selected_process = TowerfallProcess(process.pid, port, fastrun, nographics)
+        self.processes.append(selected_process)
+        self._save_state()
 
-    selected_process.send_config(config, verbose=verbose)
+      try:
+        selected_process.send_config(config, verbose=verbose)
+      except:
+        os.kill(selected_process.pid, signal.SIGTERM)
+        selected_process = None
     self._processes_in_use.add(selected_process.pid)
     self._save_state()
     return selected_process

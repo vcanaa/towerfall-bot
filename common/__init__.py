@@ -5,5 +5,6 @@ from .controls import *
 from .entity import *
 from .gamereplay import *
 from .grid import *
+from .logging_options import *
 from .namedmutex import *
 from .pathing import *

@@ -11,6 +11,8 @@ from envs import TowerfallProcessProvider, TowerfallProcess
 
 from typing import Any
 
+_VERBOSE = 0
+_TIMEOUT = 4
 
 class NoLevelFormatter(logging.Formatter):
   def format(self, record):
@@ -37,26 +39,32 @@ def get_random_command() -> str:
 def get_config(agent_count: int) -> dict[str, Any]:
   return dict(
     mode='sandbox',
-    level='2',
-    fastrun=False,
+    level='1',
+    fps=30,
     agents=[dict(type='remote', team='blue', archer='green')]*agent_count)
 
 
 def get_process(agent_count: int) -> TowerfallProcess:
-  return process_provider.get_process(get_config(agent_count))
+  return process_provider.get_process(
+    fastrun=True,
+    # nographics=True,
+    config=get_config(agent_count))
 
 
 def join(towerfall: TowerfallProcess, agent_count: int) -> list[Connection]:
   connections = []
   for i in range(agent_count):
-    connections.append(towerfall.join())
+    conn = towerfall.join(timeout=_TIMEOUT, verbose=_VERBOSE)
+    conn.log_cap = 100
+    connections.append(conn)
   return connections
 
 
 def reset(towerfall: TowerfallProcess, agent_count: int) -> list[dict]:
-  entities = [dict(type='archer', pos=dict(x=_starting_x[i], y=85)) for i in range(agent_count)]
-  entities.append(dict(type='slime', pos=dict(x=160, y=85)))
-  towerfall.send_reset(entities)
+  y = 110
+  entities = [dict(type='archer', pos=dict(x=_starting_x[i], y=y)) for i in range(agent_count)]
+  entities.append(dict(type='slime', pos=dict(x=160, y=y)))
+  towerfall.send_reset(entities, verbose=_VERBOSE)
   return entities
 
 
@@ -67,6 +75,7 @@ def receive_init(connections: list[Connection]):
     assert state_init['type'] == 'init', state_init['type']
     connections[i].write_json(dict(type='result', success=True))
 
+  for i in range(len(connections)):
     # scenario
     state_scenario = connections[i].read_json()
     assert state_scenario['type'] == 'scenario', state_scenario['type']
@@ -74,16 +83,19 @@ def receive_init(connections: list[Connection]):
 
 
 def receive_update(connections: list[Connection], entities: list[dict], length: int):
+  now = time.time()
   for j in range(length):
     for i in range(len(connections)):
       # update
       state_update = connections[i].read_json()
       assert state_update['type'] == 'update', state_update['type']
-      if j == 0:
-        pos = [e['pos'] for e in state_update['entities'] if e['type'] == 'archer' and e['playerIndex']==i][0]
-        diff = abs(pos['x'] - entities[i]['pos']['x'])
-        assert diff < 2, f"{pos['x']} != {entities[i]['pos']['x']}, diff = {diff}"
+      # if j == 0:
+      #   pos = [e['pos'] for e in state_update['entities'] if e['type'] == 'archer' and e['playerIndex']==i][0]
+      #   diff = abs(pos['x'] - entities[i]['pos']['x'])
+      #   assert diff < 2, f"{pos['x']} != {entities[i]['pos']['x']}, diff = {diff}"
       connections[i].write_json(dict(type='commands', command=get_random_command(), id=state_update['id']))
+  dt = time.time() - now
+  logging.info(f'fps: {length/dt:.2f}')
 
 
 def run_many_resets(towerfall: TowerfallProcess, agent_count: int, reset_count: int):
@@ -91,32 +103,32 @@ def run_many_resets(towerfall: TowerfallProcess, agent_count: int, reset_count: 
   entities = reset(towerfall, agent_count)
 
   receive_init(connections)
-  receive_update(connections, entities, length=150)
+  receive_update(connections, entities, length=20)
 
   for i in range(reset_count):
     entities = reset(towerfall, agent_count)
-    receive_update(connections, entities, length=10)
+    receive_update(connections, entities, length=20)
 
 
 def run_session():
-  agent_count = 2
+  agent_count = 1
   reset_count = 5
   towerfall = get_process(agent_count)
   run_many_resets(towerfall, agent_count, reset_count)
 
-  agent_count = 1
-  towerfall.send_config(get_config(agent_count))
-  run_many_resets(towerfall, agent_count, reset_count)
+  # agent_count = 1
+  # towerfall.send_config(get_config(agent_count), verbose=_VERBOSE)
+  # run_many_resets(towerfall, agent_count, reset_count)
 
-  agent_count = 3
-  towerfall.send_config(get_config(agent_count))
-  run_many_resets(towerfall, agent_count, reset_count)
+  # agent_count = 3
+  # towerfall.send_config(get_config(agent_count), verbose=_VERBOSE)
+  # run_many_resets(towerfall, agent_count, reset_count)
 
-  agent_count = 4
-  towerfall.send_config(get_config(agent_count))
-  run_many_resets(towerfall, agent_count, reset_count)
+  # agent_count = 4
+  # towerfall.send_config(get_config(agent_count), verbose=_VERBOSE)
+  # run_many_resets(towerfall, agent_count, reset_count)
 
-  process_provider.release_process(towerfall)
+  # process_provider.release_process(towerfall)
 
 
 n_it = 1

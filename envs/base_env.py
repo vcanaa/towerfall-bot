@@ -25,11 +25,13 @@ class TowerfallEnv(Env, ABC):
   def __init__(self,
       towerfall: TowerfallProcess,
       actions: Optional[TowerfallActions] = None,
+      record_path: Optional[str] = None,
       verbose: int = 0):
-    print('Initializing TowerfallEnv')
+    logging.info('Initializing TowerfallEnv')
     self.towerfall = towerfall
     self.verbose = verbose
     self.connection = self.towerfall.join(timeout=5, verbose=self.verbose)
+    self.connection.record_path = record_path
     if actions:
       self.actions = actions
     else:
@@ -37,7 +39,7 @@ class TowerfallEnv(Env, ABC):
     self.action_space = self.actions.action_space
     self._draw_elems = []
     self.is_init_sent = False
-    print('Initialized TowerfallEnv')
+    logging.info('Initialized TowerfallEnv')
 
   def _is_reset_valid(self) -> bool:
     '''
@@ -88,7 +90,7 @@ class TowerfallEnv(Env, ABC):
     '''
     Gym reset. This is called by the agent to reset the environment.
     '''
-    logging.info('Resetting environment')
+
     while True:
       self._send_reset()
       if not self.is_init_sent:
@@ -125,15 +127,19 @@ class TowerfallEnv(Env, ABC):
       command=command,
       id=self.state_update['id']
     )
-    # if self._draw_elems:
-    #   resp['draws'] = self._draw_elems
+    if self._draw_elems:
+      resp['draws'] = self._draw_elems
     self.connection.write_json(resp)
     self._draw_elems.clear()
     self.state_update = self.connection.read_json()
+    self.command = command
     assert self.state_update['type'] == 'update'
     self.entities = to_entities(self.state_update['entities'])
     self.me = self._get_own_archer(self.entities)
-    self.command = command
+    # assert self.me is not None, 'Could not find own archer'
+    # obs, done, rew, info = self._post_step()
+    # logging.info(obs)
+    # return obs, done, rew, info
     return self._post_step()
 
   def _get_own_archer(self, entities: List[Entity]) -> Optional[Entity]:

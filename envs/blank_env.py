@@ -18,9 +18,10 @@ class TowerfallBlankEnv(TowerfallEnv):
       observations: list[TowerfallObservation],
       objective: TowerfallObjective,
       actions: Optional[TowerfallActions]=None,
+      record_path: Optional[str]=None,
       verbose: int = 0):
-    super(TowerfallBlankEnv, self).__init__(towerfall, actions, verbose)
-    print('Initializing TowerfallBlankEnv')
+    super(TowerfallBlankEnv, self).__init__(towerfall, actions, record_path, verbose)
+    logging.info('Initializing TowerfallBlankEnv')
     obs_space = {}
     self.components = list(observations)
     self.components.append(objective)
@@ -29,10 +30,10 @@ class TowerfallBlankEnv(TowerfallEnv):
     for obs in self.components:
       obs.extend_obs_space(obs_space)
     self.observation_space = spaces.Dict(obs_space)
-    logging.info(str(self.observation_space))
+    logging.info('Action space: %s', str(self.action_space))
+    logging.info('Observation space: %s', str(self.observation_space))
 
   def _is_reset_valid(self) -> bool:
-    assert self.me
     return self.objective.is_reset_valid(self.state_scenario, self.me, self.entities)
 
   def _send_reset(self):
@@ -51,4 +52,5 @@ class TowerfallBlankEnv(TowerfallEnv):
     for obs in self.components:
       obs.post_step(self.me, self.entities, self.command, obs_dict)
     # logging.info(f"step: {str(obs_dict)}")
+    # logging.info(f'reward: {self.objective.rew}')
     return obs_dict, self.objective.rew, self.objective.done, {}

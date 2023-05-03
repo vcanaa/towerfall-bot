@@ -86,6 +86,9 @@ class PlayerObservation(TowerfallObservation):
 
 
 class GridObservation(TowerfallObservation):
+  '''
+  Shows a cropped view of the grid around the player.
+  '''
   def __init__(self, grid_view: GridView, sight: Optional[Union[Tuple[int, int], int]] = None, add_grid: bool = True):
     self.gv = grid_view
     if isinstance(sight, int):
@@ -94,13 +97,17 @@ class GridObservation(TowerfallObservation):
     self.sight = sight
     m, n = self.gv.view_sight_length(sight)
     self.obs_space = spaces.MultiBinary((2*m, 2*n))
+    self.frame = 0
+    self.add_grid = add_grid
 
   def extend_obs_space(self, obs_space_dict: dict[str, Space]):
-    if 'grid' in obs_space_dict:
-      raise Exception('Observation space already has \'grid\'')
-    obs_space_dict['grid'] = self.obs_space
+    if self.add_grid:
+      if 'grid' in obs_space_dict:
+        raise Exception('Observation space already has \'grid\'')
+      obs_space_dict['grid'] = self.obs_space
 
   def post_reset(self, state_scenario: dict, player: Optional[Entity], entities: list[Entity], obs_dict: dict):
+    self.frame = 0
     self.gv.set_scenario(state_scenario)
     self._update_grid(player, entities)
 
@@ -109,6 +116,7 @@ class GridObservation(TowerfallObservation):
   def post_step(self, player: Optional[Entity], entities: list[Entity], command: str, obs_dict: dict):
     self._update_grid(player, entities)
     self._extend_obs(obs_dict)
+    self.frame += 1
 
   def _update_grid(self, player: Optional[Entity], entities: list[Entity]):
     if player:
@@ -119,4 +127,5 @@ class GridObservation(TowerfallObservation):
     self.prev_player = player
 
   def _extend_obs(self, obs_dict: dict):
-    obs_dict['grid'] = self.gv.view(self.sight)
+    if self.add_grid:
+      obs_dict['grid'] = self.gv.view(self.sight)

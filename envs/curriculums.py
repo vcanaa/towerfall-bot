@@ -3,6 +3,8 @@ import json
 import random
 import os
 
+import numpy as np
+
 from gym import Space
 
 from common import GridView, Entity, Vec2, WIDTH, HEIGHT
@@ -45,7 +47,7 @@ class FollowCloseTargetCurriculum(TowerfallObjective):
   :param episode_max_len: Amount of frames after which the episode ends.
   :param rew_dc: Agent loses this amount of reward per frame, in order to force it to get the target faster.
   '''
-  def __init__(self, grid_view: GridView, distance=8, max_distance=16, bounty=10, episode_max_len=90, rew_dc=2):
+  def __init__(self, grid_view: Optional[GridView], distance=8, max_distance=16, bounty=10, episode_max_len=90, rew_dc=2):
     print('FollowCloseTargetCurriculum')
     self.gv = grid_view
     self.distance = distance
@@ -69,9 +71,15 @@ class FollowCloseTargetCurriculum(TowerfallObjective):
       return 1
     return len(self.start_ends)
 
-  def is_reset_valid(self, state_scenario: dict, player: Entity, entities: list[Entity]) -> bool:
+  def is_reset_valid(self, state_scenario: dict, player: Optional[Entity], entities: list[Entity]) -> bool:
     if self.initialized:
       return True
+
+    assert player, 'player is required to create curriculum'
+
+    assert self.gv, 'grid_view is required to create curriculum'
+    # if self.gv is None:
+    #   self.gv = GridView(5)
     self.gv.set_scenario(state_scenario)
     self.gv.update(entities, player)
     self.start_ends: list[Tuple[Vec2, Vec2]] = []
@@ -127,19 +135,18 @@ class FollowCloseTargetCurriculum(TowerfallObjective):
     self.done = self.objective.done
 
   def _pick_all_starts(self) -> Iterable[Vec2]:
-    margin = 15
-    for x in range(margin, WIDTH - margin, 10):
-      for y in range(margin, HEIGHT - margin, 10):
-        yield Vec2(x, y)
+    return [Vec2(160, 110)]
+    # margin = 15
+    # for x in range(margin, WIDTH - margin, 10):
+    #   for y in range(margin, HEIGHT - margin, 10):
+    #     yield Vec2(x, y)
 
   def _pick_all_ends(self, start: Vec2) -> Iterable[Vec2]:
-    for dx in [-1, 1]:
-      for dy in range(0, 2):
-        v = Vec2(dx, dy)
-        v.set_length(self.distance)
-        yield start + v
-
-    for dy in [-1, 1]:
-      v = Vec2(0, dy)
-      v.set_length(self.distance)
+    v = Vec2(-self.distance, 20)
+    n = 10
+    yield start + v
+    for i in range(10):
+      v.x += self.distance / n * 2
       yield start + v
+
+

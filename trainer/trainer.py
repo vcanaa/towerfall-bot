@@ -142,12 +142,12 @@ class Trainer:
     model, _ = self.load_from_trial(load_project_name, load_trial_name, load_model_name, monitored_env)
     self._train_model(model, env, total_steps, configs, project_name, trial_name)
 
-  def evaluate_model(self, env_fn: Callable[[dict[str, Any]], TowerfallBlankEnv], n_episodes: int, project_name: str, trial_name: str, model_name: str):
+  def evaluate_model(self, env_fn: Callable[[dict[str, Any]], Env], n_episodes: int, project_name: str, trial_name: str, model_name: str):
     model, configs = self.load_from_trial(project_name, trial_name, model_name)
     env = env_fn(configs)
     evaluate_policy(model, env=env, n_eval_episodes=n_episodes, render=False, deterministic=False)
 
-  def evaluate_all_models(self, env_fn: Callable[[dict[str, Any]], TowerfallBlankEnv], n_episodes: int, project_name: str, trial_name: str):
+  def evaluate_all_models(self, env_fn: Callable[[dict[str, Any]], Env], n_episodes: int, project_name: str, trial_name: str):
     trial_path = self.get_trial_path(project_name, trial_name)
     logging.info(f'Loading experiment from {trial_path}')
     with open(os.path.join(trial_path, 'hparams.json'), 'r') as file:

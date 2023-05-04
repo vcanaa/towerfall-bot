@@ -117,22 +117,24 @@ class TowerfallProcessProvider:
       ]
     )
 
-  def get_process(self, fastrun: bool = False, nographics: bool = False, config = None, verbose=0) -> TowerfallProcess:
+  def get_process(self, fastrun: bool = False, nographics: bool = False, config = None, verbose=0, reuse: bool = True) -> TowerfallProcess:
     if not config:
       config = self.default_config
 
     selected_process = None
     while not selected_process:
-      # Try to find an existing process that is not in use
-      def is_suitable_process(process: TowerfallProcess):
-        if process.fastrun != fastrun:
-          return False
-        if process.nographics != nographics:
-          return False
-        if process.pid in self._processes_in_use:
-          return False
-        return True
-      selected_process = next((p for p in self.processes if is_suitable_process(p)), None)
+      selected_process = None
+      if reuse:
+        # Try to find an existing process that is not in use
+        def is_suitable_process(process: TowerfallProcess):
+          if process.fastrun != fastrun:
+            return False
+          if process.nographics != nographics:
+            return False
+          if process.pid in self._processes_in_use:
+            return False
+          return True
+        selected_process = next((p for p in self.processes if is_suitable_process(p)), None)
 
       # If no process was found, start a new one
       if not selected_process:
@@ -161,8 +163,13 @@ class TowerfallProcessProvider:
     self._processes_in_use.remove(process.pid)
 
   def close(self):
+    logging.info('Closing all processes...')
     for process in self.processes:
-      os.kill(process.pid, signal.SIGTERM)
+      try:
+        os.kill(process.pid, signal.SIGTERM)
+      except Exception as ex:
+        logging.error(f'Failed to kill process {process.pid}: {ex}')
+        continue
 
   def _get_port(self, pid: int) -> int:
     port_path = os.path.join(self.towerfall_path, 'ports', str(pid))

@@ -10,6 +10,7 @@ config*.json
 
 data/
 ignore/
+checkpoints/
 logs/
 models/
 optuna/

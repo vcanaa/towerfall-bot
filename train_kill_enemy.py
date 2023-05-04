@@ -17,10 +17,10 @@ def get_configs():
       policy = 'MultiInputPolicy',
       n_steps = 1024,
       batch_size = 64,
-      learning_rate= 1e-4,
+      learning_rate= 2*1e-5,
       policy_kwargs= dict(
         # net_arch = [64, 64]
-        net_arch = [256] * 2
+        net_arch = [128] * 2
       ),
     ),
     grid_params=dict(
@@ -33,12 +33,12 @@ def get_configs():
       min_distance=50,
       max_distance=120,
       bounty=5,
-      episode_max_len=60*4
+      episode_max_len=60*6
     ),
     learn_params = dict(),
     actions_params = dict(
       can_shoot = False,
-      can_dash = False,
+      can_dash = True,
     )
   )
 

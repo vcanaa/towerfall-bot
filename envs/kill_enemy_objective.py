@@ -75,7 +75,7 @@ class KillEnemyObjective(TowerfallObjective):
     self.rew = 0
     if not player or self.episode_len >= self.episode_max_len:
       self.done = True
-      self.rew -= self.bounty
+      self.rew -= self.bounty / 5
 
     if len(targets) < self.n_targets_prev:
       self.rew = self.bounty * (self.n_targets_prev - len(targets))
@@ -99,7 +99,7 @@ class KillEnemyObjective(TowerfallObjective):
 
     target_by_dist.sort(key=lambda x: x[0])
     for i, (_, target) in enumerate(target_by_dist):
-      obs_target[i*3 + 1] = 1
+      obs_target[i*3] = 1
       obs_target[i*3 + 1] = self.limit(target.p.x - player.p.x / HW, -1, 1)
       obs_target[i*3 + 2] = self.limit(target.p.y - player.p.y / HH, -1, 1)
     obs_dict['targets'] = obs_target

@@ -17,16 +17,7 @@ class TowerfallEntityEnvImpl(TowerfallEntityEnv):
   def __init__(self,
       record_path: Optional[str]=None,
       verbose: int = 0):
-    towerfall_provider = TowerfallProcessProvider('entity-env-trainer')
-    towerfall = towerfall_provider.get_process(
-      fastrun=True,
-      reuse=False,
-      config=dict(
-      mode='sandbox',
-      level='3',
-      agents=[dict(type='remote', team='blue', archer='green')]
-    ))
-    super().__init__(towerfall, record_path, verbose)
+    super().__init__(record_path=record_path, verbose=verbose)
     self.enemy_count = 2
     self.min_distance = 50
     self.max_distance = 100
@@ -101,9 +92,8 @@ class TowerfallEntityEnvImpl(TowerfallEntityEnv):
         self.reward += delta_arrow * 0.1
       self.prev_arrow_count = arrow_count
 
-
-    if self.reward != 0:
-      logging.info(f'Reward: {self.reward}')
+    # if self.reward != 0:
+    #   logging.info(f'Reward: {self.reward}')
 
     self.prev_enemy_ids = enemy_ids
     if len(self.prev_enemy_ids) == 0:

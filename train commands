@@ -1,0 +1,7 @@
+python train_kill_enemy_with_entity_env.py ^
+  total_timesteps=2000 rollout.steps=1024 ^
+  rollout.num_envs=1 ^
+  rollout.processes=1 ^
+  optim.bs=256 ^
+  optim.lr=0.0001 ^
+  --checkpoint-dir=checkpoints

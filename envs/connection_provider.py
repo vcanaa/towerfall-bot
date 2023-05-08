@@ -9,7 +9,9 @@ from subprocess import Popen, PIPE
 
 from common import Connection
 
-from typing import Any, Optional
+from typing import Any, Optional, Tuple
+
+from common.namedmutex import NamedMutex
 
 
 _HOST = '127.0.0.1'
@@ -88,25 +90,29 @@ class TowerfallProcessProvider:
 
   params name: Name of the connection provider. Used to separate different connection providers states.
   '''
-  def __init__(self, name: str):
-    self.towerfall_path = 'C:/Program Files (x86)/Steam/steamapps/common/TowerFall'
+  def __init__(self, name: Optional[str] = None,
+              #  towerfall_path: str = 'C:/Users/vcanaa/towerfall/TowerFall',
+               towerfall_path: str = 'C:/Program Files (x86)/Steam/steamapps/common/TowerFall'):
+    self.towerfall_path = towerfall_path
     self.towerfall_path_exe = os.path.join(self.towerfall_path, 'TowerFall.exe')
-    self.connection_path = os.path.join('.connection_provider', name)
-    os.makedirs(self.connection_path, exist_ok=True)
-    self.state_path = os.path.join(self.connection_path, 'state.json')
+    self.name = name
     self.processes = []
-    if os.path.exists(self.state_path):
-      with open(self.state_path, 'r') as file:
-        for process_data in json.loads(file.read()):
-          try:
-            psutil.Process(process_data['pid'])
-            self.processes.append(TowerfallProcess(**process_data))
-          except psutil.NoSuchProcess:
-            continue
+    if self.name:
+      self.connection_path = os.path.join('.connection_provider', self.name)
+      os.makedirs(self.connection_path, exist_ok=True)
+      self.state_path = os.path.join(self.connection_path, 'state.json')
+
+      if os.path.exists(self.state_path):
+        with open(self.state_path, 'r') as file:
+          for process_data in json.loads(file.read()):
+            try:
+              psutil.Process(process_data['pid'])
+              self.processes.append(TowerfallProcess(**process_data))
+            except psutil.NoSuchProcess:
+              continue
+      self._save_state()
 
     self._processes_in_use = set()
-
-    self._save_state()
 
     self.default_config = dict(
       mode='sandbox',
@@ -136,7 +142,7 @@ class TowerfallProcessProvider:
           return True
         selected_process = next((p for p in self.processes if is_suitable_process(p)), None)
 
-      # If no process was found, start a new one
+      # If no process can be reused, start a new one
       if not selected_process:
         logging.info(f'Starting new process {self.towerfall_path_exe}')
         pargs = [self.towerfall_path_exe, '--noconfig']
@@ -144,11 +150,15 @@ class TowerfallProcessProvider:
           pargs.append('--fastrun')
         if nographics:
           pargs.append('--nographics')
-        process = Popen(pargs, cwd=self.towerfall_path)
-        port = self._get_port(process.pid)
-        selected_process = TowerfallProcess(process.pid, port, fastrun, nographics)
-        self.processes.append(selected_process)
-        self._save_state()
+        # Multiple TowerFall.exe can't be started at the same time, due to conflict accessing Content folder.
+        with NamedMutex(f'TowerfallProcessProvider_{self.name}'):
+          process = Popen(pargs, cwd=self.towerfall_path)
+          port = self._get_port(process.pid)
+          selected_process = TowerfallProcess(process.pid, port, fastrun, nographics)
+          self.processes.append(selected_process)
+          self._save_state()
+          time.sleep(2) # Give some time for game to load. There is currently no way to tell if the game loaded.
+
 
       try:
         selected_process.send_config(config, verbose=verbose)
@@ -162,10 +172,50 @@ class TowerfallProcessProvider:
   def release_process(self, process: TowerfallProcess):
     self._processes_in_use.remove(process.pid)
 
+  def join_new(self, fastrun=True, nographics=False, config = None, timeout=2, verbose=0) -> Tuple[Connection, TowerfallProcess]:
+    connection = None
+    process = None
+    logging.info('Create a new process and join')
+    while not connection or not process:
+      try:
+        process = self.get_process(fastrun, nographics, config, verbose, reuse=False)
+        connection = process.join(timeout, verbose)
+      except Exception as ex:
+        logging.error(f'Failed to create and join new process: {ex}')
+        if process:
+          self.kill_process(process.pid)
+        if connection:
+          connection.close()
+
+    return connection, process
+
+  def kill_process(self, pid):
+    try:
+      os.kill(pid, signal.SIGTERM)
+    except Exception as ex:
+      logging.error(f'Failed to kill process {pid}: {ex}')
+    finally:
+      self.processes.remove(next(p for p in self.processes if p.pid == pid))
+      self._save_state()
+
   def close(self):
-    logging.info('Closing all processes...')
+    logging.info(f'Closing all processes in context {self.name}...')
     for process in self.processes:
       try:
+        os.kill(process.pid, signal.SIGTERM)
+      except Exception as ex:
+        logging.error(f'Failed to kill process {process.pid}: {ex}')
+        continue
+
+  @classmethod
+  def close_all(cls):
+    logging.info('Closing all TowerFall.exe processes...')
+    for process in psutil.process_iter(attrs=['pid', 'name']):
+      # logging.info(f'Checking process {process.pid} {process.name()}')
+      if process.name() != 'TowerFall.exe':
+        continue
+      try:
+        logging.info(f'Killing process {process.pid}...')
         os.kill(process.pid, signal.SIGTERM)
       except Exception as ex:
         logging.error(f'Failed to kill process {process.pid}: {ex}')
@@ -182,8 +232,9 @@ class TowerfallProcessProvider:
       return int(file.readline())
 
   def _save_state(self):
-    with open(self.state_path, 'w') as file:
-      file.write(json.dumps([p.to_dict() for p in self.processes], indent=2))
+    if self.name:
+      with open(self.state_path, 'w') as file:
+        file.write(json.dumps([p.to_dict() for p in self.processes], indent=2))
 
   def _match_config(self, config1, config2):
     return False

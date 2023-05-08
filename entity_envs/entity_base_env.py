@@ -8,17 +8,28 @@ from entity_gym.env import Entity as EntityGym
 from common.constants import DASH, DOWN, JUMP, LEFT, RIGHT, SHOOT, UP
 from common.entity import Entity, to_entities
 
-from envs.connection_provider import TowerfallProcess
+from envs.connection_provider import TowerfallProcess, TowerfallProcessProvider
 
 class TowerfallEntityEnv(Environment):
   def __init__(self,
-      towerfall: TowerfallProcess,
+      towerfall: Optional[TowerfallProcess] = None,
       record_path: Optional[str] = None,
       verbose: int = 0):
     logging.info('Initializing TowerfallEntityEnv')
-    self.towerfall = towerfall
     self.verbose = verbose
-    self.connection = self.towerfall.join(timeout=5, verbose=self.verbose)
+    if towerfall:
+      self.connection = towerfall.join(timeout=5, verbose=self.verbose)
+      self.towerfall = towerfall
+    else:
+      self.connection, self.towerfall = TowerfallProcessProvider().join_new(
+        fastrun=True,
+        # nographics=True,
+        config=dict(
+          mode='sandbox',
+          level='3',
+          agents=[dict(type='remote', team='blue', archer='green')]),
+        timeout=5,
+        verbose=self.verbose)
     self.connection.record_path = record_path
     self._draw_elems = []
     self.is_init_sent = False
@@ -27,7 +38,7 @@ class TowerfallEntityEnv(Environment):
 
   def _is_reset_valid(self) -> bool:
     '''
-    Use this to make check if the initiallization is valid.
+    Use this to check if the initiallization is valid.
     This is useful to collect information about the environment to programmatically construct a sequence of tasks, then
     reset the environment again with the proper reseet instructions.
 

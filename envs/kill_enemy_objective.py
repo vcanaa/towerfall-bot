@@ -1,5 +1,5 @@
 import random
-from typing import Any, Optional
+from typing import Any, Dict, List, Optional
 
 import numpy as np
 from gym import Space, spaces
@@ -31,15 +31,15 @@ class KillEnemyObjective(TowerfallObjective):
     self.episode_len = 0
     self.obs_space = spaces.Box(low=-1, high = 1, shape=(3*self.enemy_count,), dtype=np.float32)
 
-  def extend_obs_space(self, obs_space_dict: dict[str, Space]):
+  def extend_obs_space(self, obs_space_dict: Dict[str, Space]):
     if 'targets' in obs_space_dict:
       raise Exception('Observation space already has \'target\'')
     target_space = {}
     obs_space_dict['targets'] = self.obs_space
 
-  def get_reset_entities(self) -> Optional[list[dict]]:
+  def get_reset_entities(self) -> Optional[List[Dict[str, Any]]]:
     p = Vec2(160, 110)
-    entities: list[dict[str, Any]] = [dict(type='archer', pos=p.dict())]
+    entities: List[Dict[str, Any]] = [dict(type='archer', pos=p.dict())]
     for i in range(self.enemy_count):
       sign = random.randint(0, 1)*2 - 1
       d = random.uniform(self.min_distance, self.max_distance) * sign
@@ -50,7 +50,7 @@ class KillEnemyObjective(TowerfallObjective):
       entities.append(enemy)
     return entities
 
-  def post_reset(self, state_scenario: dict, player: Optional[Entity], entities: list[Entity], obs_dict: dict):
+  def post_reset(self, state_scenario: Dict[str, Any], player: Optional[Entity], entities: List[Entity], obs_dict: Dict[str, Any]):
     assert player
     targets = list(e for e in entities if e['type'] == self.enemy_type)
     assert len(targets) > 0, 'No targets found'
@@ -62,13 +62,13 @@ class KillEnemyObjective(TowerfallObjective):
     self._update_obs(player, targets, obs_dict)
 
 
-  def post_step(self, player: Optional[Entity], entities: list[Entity], command: str, obs_dict: dict):
+  def post_step(self, player: Optional[Entity], entities: List[Entity], command: str, obs_dict: Dict[str, Any]):
     targets = list(e for e in entities if e['id'] in self.target_ids)
     self._update_reward(player, targets)
     self.episode_len += 1
     self._update_obs(player, targets, obs_dict)
 
-  def _update_reward(self, player: Optional[Entity], targets: list[Entity]):
+  def _update_reward(self, player: Optional[Entity], targets: List[Entity]):
     '''
     Updates the reward and checks if the episode is done.
     '''
@@ -87,7 +87,7 @@ class KillEnemyObjective(TowerfallObjective):
   def limit(self, x: float, a: float, b: float) -> float:
     return x+b-a if x < a else x-b+a if x > b else x
 
-  def _update_obs(self, player: Optional[Entity], targets: list[Entity], obs_dict: dict):
+  def _update_obs(self, player: Optional[Entity], targets: List[Entity], obs_dict: Dict[str, Any]):
     obs_target = np.zeros((3*self.enemy_count,), dtype=np.float32)
     if not player:
       obs_dict['targets'] = obs_target

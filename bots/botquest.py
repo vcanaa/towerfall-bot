@@ -6,7 +6,7 @@ from common import *
 
 from .bot import Bot
 
-from typing import Any, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 _HOST = "127.0.0.1"
 _PORT = 12024
@@ -44,14 +44,14 @@ class BotQuest(Bot):
       self.handle_update(game_state)
 
 
-  def handle_init(self, state: dict):
+  def handle_init(self, state: Dict[str, Any]):
     logging.info("handle_init")
     self.state_init = state
     random.seed(state['index'])
     self._connection.write('.')
 
 
-  def handle_scenario(self, state: dict):
+  def handle_scenario(self, state: Dict[str, Any]):
     logging.info("handle_scenario")
     self.state_scenario = state
     self.gv.set_scenario(state)

@@ -8,28 +8,24 @@ from entity_gym.env import Entity as EntityGym
 from common.constants import DASH, DOWN, JUMP, LEFT, RIGHT, SHOOT, UP
 from common.entity import Entity, to_entities
 
-from envs.connection_provider import TowerfallProcess, TowerfallProcessProvider
+from towerfall import Towerfall
 
 class TowerfallEntityEnv(Environment):
   def __init__(self,
-      towerfall: Optional[TowerfallProcess] = None,
+      towerfall: Optional[Towerfall] = None,
       record_path: Optional[str] = None,
       verbose: int = 0):
     logging.info('Initializing TowerfallEntityEnv')
     self.verbose = verbose
-    if towerfall:
-      self.connection = towerfall.join(timeout=5, verbose=self.verbose)
-      self.towerfall = towerfall
-    else:
-      self.connection, self.towerfall = TowerfallProcessProvider().join_new(
-        fastrun=True,
-        # nographics=True,
-        config=dict(
-          mode='sandbox',
-          level='3',
-          agents=[dict(type='remote', team='blue', archer='green')]),
-        timeout=5,
-        verbose=self.verbose)
+    self.towerfall = towerfall if towerfall else Towerfall(fastrun=True,
+      # nographics=True,
+      config=dict(
+        mode='sandbox',
+        level='3',
+        agents=[dict(type='remote', team='blue', archer='green')]),
+      timeout=5,
+      verbose=self.verbose)
+    self.connection = self.towerfall.join()
     self.connection.record_path = record_path
     self._draw_elems = []
     self.is_init_sent = False
@@ -53,7 +49,7 @@ class TowerfallEntityEnv(Environment):
     Returns:
       True if hard reset, False if soft reset.
     '''
-    self.towerfall.send_reset(verbose=self.verbose)
+    self.towerfall.send_reset()
 
   @abstractmethod
   def _post_reset(self) -> Observation:
@@ -174,7 +170,7 @@ class TowerfallEntityEnv(Environment):
   def act(self, actions: Mapping[ActionName, Action]) -> Observation:
     command = self._actions_to_command(actions)
 
-    resp: dict[str, Any] = dict(
+    resp: Dict[str, Any] = dict(
       type='commands',
       command=command,
       id=self.state_update['id']

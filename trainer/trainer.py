@@ -1,13 +1,13 @@
 import json
 import logging
 import os
-from typing import Any, Callable, Optional, Tuple
-from gym import Env
+from typing import Any, Callable, Dict, Optional, Tuple
 
+import yaml
+from gym import Env
 from stable_baselines3 import PPO
 from stable_baselines3.common.evaluation import evaluate_policy
 from stable_baselines3.common.monitor import Monitor
-import yaml
 
 from envs.blank_env import TowerfallBlankEnv
 
@@ -19,7 +19,7 @@ class Trainer:
   def __init__(self, export_wandb: bool = True):
     self.export_wandb = export_wandb
 
-  def init_wandb(self, configs: dict[str, Any], project_name: str, trial_name: str):
+  def init_wandb(self, configs: Dict[str, Any], project_name: str, trial_name: str):
     from wandb.wandb_run import Run
 
     import wandb
@@ -76,7 +76,7 @@ class Trainer:
   def get_trial_path(self, project_name: str, trial_name: str):
     return f'tmp/{project_name}/{trial_name}'
 
-  def _train_model(self, model, env: TowerfallBlankEnv, total_steps: int, configs: dict[str, Any], project_name: str, trial_name: str) -> float:
+  def _train_model(self, model, env: TowerfallBlankEnv, total_steps: int, configs: Dict[str, Any], project_name: str, trial_name: str) -> float:
     trial_path = self.get_trial_path(project_name, trial_name)
     os.makedirs(trial_path, exist_ok=True)
 
@@ -113,7 +113,7 @@ class Trainer:
         self.run.finish()
     return train_callback.best_mean_reward
 
-  def train(self, env: TowerfallBlankEnv, total_steps: int, configs: dict[str, Any], project_name: str, trial_name: str):
+  def train(self, env: TowerfallBlankEnv, total_steps: int, configs: Dict[str, Any], project_name: str, trial_name: str):
     trial_path = self.get_trial_path(project_name, trial_name)
     logging.info(f'Creating Monitor in {trial_path}')
     monitored_env = Monitor(env, os.path.join(trial_path, 'monitor'))
@@ -127,14 +127,14 @@ class Trainer:
     return self._train_model(model, env, total_steps, configs, project_name, trial_name)
 
   def fork_training(self,
-                    env: TowerfallBlankEnv,
-                    total_steps: int,
-                    configs: dict[str, Any],
-                    project_name: str,
-                    trial_name: str,
-                    load_project_name: str,
-                    load_trial_name: str,
-                    load_model_name: str):
+      env: TowerfallBlankEnv,
+      total_steps: int,
+      configs: Dict[str, Any],
+      project_name: str,
+      trial_name: str,
+      load_project_name: str,
+      load_trial_name: str,
+      load_model_name: str):
     trial_path = self.get_trial_path(project_name, trial_name)
     logging.info(f'Creating Monitor in {trial_path}')
     monitored_env = Monitor(env, os.path.join(trial_path, 'monitor'))
@@ -142,12 +142,12 @@ class Trainer:
     model, _ = self.load_from_trial(load_project_name, load_trial_name, load_model_name, monitored_env)
     self._train_model(model, env, total_steps, configs, project_name, trial_name)
 
-  def evaluate_model(self, env_fn: Callable[[dict[str, Any]], Env], n_episodes: int, project_name: str, trial_name: str, model_name: str):
+  def evaluate_model(self, env_fn: Callable[[Dict[str, Any]], Env], n_episodes: int, project_name: str, trial_name: str, model_name: str):
     model, configs = self.load_from_trial(project_name, trial_name, model_name)
     env = env_fn(configs)
     evaluate_policy(model, env=env, n_eval_episodes=n_episodes, render=False, deterministic=False)
 
-  def evaluate_all_models(self, env_fn: Callable[[dict[str, Any]], Env], n_episodes: int, project_name: str, trial_name: str):
+  def evaluate_all_models(self, env_fn: Callable[[Dict[str, Any]], Env], n_episodes: int, project_name: str, trial_name: str):
     trial_path = self.get_trial_path(project_name, trial_name)
     logging.info(f'Loading experiment from {trial_path}')
     with open(os.path.join(trial_path, 'hparams.json'), 'r') as file:

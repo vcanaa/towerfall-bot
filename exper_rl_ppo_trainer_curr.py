@@ -5,6 +5,8 @@ import numpy as np
 import time
 import json
 
+from towerfall.connection import Connection
+
 try:
     import wandb
 except ImportError:
@@ -19,7 +21,7 @@ from stable_baselines3.common.monitor import load_results, Monitor
 from stable_baselines3.common.callbacks import BaseCallback
 
 from envs import TowerfallBlankEnv, GridObservation, PlayerObservation, FollowTargetObjective, FollowCloseTargetCurriculum
-from common import Connection, GridView
+from common import GridView
 
 from typing import Any
 

@@ -1,19 +1,18 @@
-from typing import Any, Optional
+from typing import Any, Dict, Optional
 
 from common.grid import GridView
 from envs.actions import TowerfallActions
 from envs.blank_env import TowerfallBlankEnv
-from envs.connection_provider import TowerfallProcessProvider
 from envs.curriculums import FollowCloseTargetCurriculum
 from envs.kill_enemy_objective import KillEnemyObjective
 from envs.observations import GridObservation
+from towerfall import Towerfall
 
 
-def create_simple_move_env(configs: dict[str, Any], record_path: Optional[str]=None, verbose=0):
+def create_simple_move_env(configs: Dict[str, Any], record_path: Optional[str]=None, verbose=0):
   grid_view = GridView(grid_factor=5)
   objective = FollowCloseTargetCurriculum(grid_view, **configs['objective_params'])
-  towerfall_provider = TowerfallProcessProvider('default')
-  towerfall = towerfall_provider.get_process(
+  towerfall = Towerfall(
     fastrun=True,
     config=dict(
     mode='sandbox',
@@ -31,10 +30,9 @@ def create_simple_move_env(configs: dict[str, Any], record_path: Optional[str]=N
     verbose=verbose)
 
 
-def create_kill_enemy(configs: dict[str, Any], record_path: Optional[str]=None, verbose=0):
+def create_kill_enemy(configs: Dict[str, Any], record_path: Optional[str]=None, verbose=0):
   objective = KillEnemyObjective(**configs['objective_params'])
-  towerfall_provider = TowerfallProcessProvider('default')
-  towerfall = towerfall_provider.get_process(
+  towerfall = Towerfall(
     fastrun=True,
     config=dict(
     mode='sandbox',

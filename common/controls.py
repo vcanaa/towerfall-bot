@@ -1,20 +1,15 @@
-import sys
 import json
 import logging
-import numpy as np
-
 from math import atan2, pi
-from threading import Thread, Lock
-
-from pyjoystick.sdl2 import Key, Joystick, run_event_loop
-
-from common import reply, Vec2
-
-from .connection import Connection
-
+from threading import Lock, Thread
 from typing import Optional
-from numpy.typing import NDArray
 
+import numpy as np
+from numpy.typing import NDArray
+from pyjoystick.sdl2 import Joystick, Key, run_event_loop
+
+from common import Vec2, reply
+from towerfall import Connection
 
 pi8 = pi / 8
 

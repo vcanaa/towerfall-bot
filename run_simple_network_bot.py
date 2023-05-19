@@ -26,7 +26,7 @@ def reply():
         "type":"commands",
         "command": ''.join(pressed)
     }))
-    
+
     #   print(json.dumps({
     #     "type":"commands",
     #     "command": ''.join(pressed)

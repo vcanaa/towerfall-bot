@@ -1,26 +1,21 @@
 import sys
-sys.path.insert(0, 'C:/Program Files (x86)/Steam/steamapps/common/TowerFall/aimod')
+
+sys.path.insert(0, '.')
 
 import logging
-
-from envs import TowerfallBlankEnv, FollowCloseTargetCurriculum, GridObservation, PlayerObservation, TowerfallProcessProvider
-
-from common import GridView
-
 from typing import Any
 
-class NoLevelFormatter(logging.Formatter):
-  def format(self, record):
-    return record.getMessage()
+from common import GridView, logging_options
+from envs import (FollowCloseTargetCurriculum, GridObservation,
+                  PlayerObservation, TowerfallBlankEnv)
+from towerfall import Towerfall
 
-logging.basicConfig(level=logging.INFO)
-logging.getLogger().handlers[0].setFormatter(NoLevelFormatter())
+logging_options.set_default()
 
 def create_env(configs) -> TowerfallBlankEnv:
   grid_view = GridView(grid_factor=5)
   objective = FollowCloseTargetCurriculum(grid_view, **configs['objective_params'])
-  towerfall_provider = TowerfallProcessProvider('default')
-  towerfall = towerfall_provider.get_process(config=dict(
+  towerfall = Towerfall(config=dict(
     mode='sandbox',
     level='2',
     agents=[dict(type='remote', team='blue', archer='green')]
@@ -32,7 +27,6 @@ def create_env(configs) -> TowerfallBlankEnv:
       PlayerObservation()
     ],
     objective=objective,
-    actions=
     verbose=1)
   # check_env(env)
   return env

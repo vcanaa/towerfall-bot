@@ -1,10 +1,13 @@
 import sys
-sys.path.insert(0, 'C:/Program Files (x86)/Steam/steamapps/common/TowerFall/aimod')
+
+sys.path.insert(0, '.')
+
+from typing import List
 
 import numpy as np
-from common import crop_grid, Vec2
-
 from numpy.typing import NDArray
+
+from common import Vec2, crop_grid
 
 m = 8
 n = 6
@@ -23,7 +26,7 @@ def print_crop(g):
   print(''.join(s))
 
 
-def test_combinations(bl: Vec2, tr: Vec2, grid: NDArray, expected: list):
+def test_combinations(bl: Vec2, tr: Vec2, grid: NDArray, expected: List[List[int]]):
   for dx in range(-320, 321, 320):
     for dy in range(-240, 241, 240):
       d = Vec2(dx, dy)

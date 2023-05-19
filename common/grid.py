@@ -1,14 +1,12 @@
 import logging
+from typing import Any, Dict, List, Optional, Tuple, Union
 
-import numpy as np
 import matplotlib.pyplot as plt
-
+import numpy as np
 from numpy.typing import NDArray
 
-from .common import Entity, bounded, Vec2, grid_pos
-from .constants import WIDTH, HEIGHT, HW, HH
-
-from typing import List, Tuple, Union, Optional
+from .common import Entity, Vec2, bounded, grid_pos
+from .constants import HEIGHT, HH, HW, WIDTH
 
 
 def plot_grid(grid: NDArray, name: str):
@@ -113,7 +111,7 @@ class GridView():
   def __init__(self, grid_factor: int):
     self.gf: int = grid_factor
 
-  def set_scenario(self, game_state: dict):
+  def set_scenario(self, game_state: Dict[str, Any]):
     # logging.info(f'Setting scenario in GridView {game_state["grid"]}')
     self.fixed_grid10 = np.array(game_state['grid'])
     self.csize: int = int(game_state['cellSize'])

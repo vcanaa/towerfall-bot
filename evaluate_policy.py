@@ -1,20 +1,16 @@
 import argparse
 import logging
 import os
-import numpy as np
-import time
 import json
 
 from stable_baselines3 import PPO
-from stable_baselines3.common.monitor import load_results, Monitor
-from stable_baselines3.common.callbacks import BaseCallback
+from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.env_checker import check_env
 from stable_baselines3.common.evaluation import evaluate_policy
-from stable_baselines3.common.results_plotter import   ts2xy, plot_results
-from envs import TowerfallBlankEnv, GridObservation, PlayerObservation, FollowTargetObjective, FollowCloseTargetCurriculum
+from envs import TowerfallBlankEnv, GridObservation, PlayerObservation, FollowCloseTargetCurriculum
 
 
-from common import Connection, GridView
+from common import GridView
 
 class NoLevelFormatter(logging.Formatter):
   def format(self, record):
@@ -74,10 +70,10 @@ def evaluate(load_from: str):
 
   logging.info(f'Running evaluation for {last_model}')
   logging.info('Deterministic=False')
-  evaluate_policy(model, 
-                  env=env, 
-                  n_eval_episodes=50, 
-                  render=False, 
+  evaluate_policy(model,
+                  env=env,
+                  n_eval_episodes=50,
+                  render=False,
                   deterministic=False,
                   callback=input_blocking_callback)
   # logging.info('Deterministic=True')

@@ -1,21 +1,21 @@
 import logging
+from typing import List, Optional, Tuple
 
 from gym import spaces
 
-from .base_env import TowerfallEnv
-from .actions import TowerfallActions
-from .observations import TowerfallObservation
-from .objectives import TowerfallObjective
-from .connection_provider import TowerfallProcess
+from towerfall.towerfall import Towerfall
 
-from typing import Tuple, Optional
+from .actions import TowerfallActions
+from .base_env import TowerfallEnv
+from .objectives import TowerfallObjective
+from .observations import TowerfallObservation
 
 
 class TowerfallBlankEnv(TowerfallEnv):
   '''A blank environment that can be customized with the addition of observations and an objective.'''
   def __init__(self,
-      towerfall: TowerfallProcess,
-      observations: list[TowerfallObservation],
+      towerfall: Towerfall,
+      observations: List[TowerfallObservation],
       objective: TowerfallObjective,
       actions: Optional[TowerfallActions]=None,
       record_path: Optional[str]=None,
@@ -38,7 +38,7 @@ class TowerfallBlankEnv(TowerfallEnv):
 
   def _send_reset(self):
     reset_entities = self.objective.get_reset_entities()
-    self.towerfall.send_reset(reset_entities, verbose=self.verbose)
+    self.towerfall.send_reset(reset_entities)
 
   def _post_reset(self) -> dict:
     obs_dict = {}

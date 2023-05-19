@@ -12,7 +12,7 @@ from common import GridView, Entity, Vec2, WIDTH, HEIGHT
 from .objectives import FollowTargetObjective
 from .objectives import TowerfallObjective
 
-from typing import Tuple, Iterable, Optional
+from typing import Any, Dict, List, Tuple, Iterable, Optional
 
 
 class TaskEncoder(json.JSONEncoder):
@@ -71,7 +71,7 @@ class FollowCloseTargetCurriculum(TowerfallObjective):
       return 1
     return len(self.start_ends)
 
-  def is_reset_valid(self, state_scenario: dict, player: Optional[Entity], entities: list[Entity]) -> bool:
+  def is_reset_valid(self, state_scenario: Dict[str, Any], player: Optional[Entity], entities: List[Entity]) -> bool:
     if self.initialized:
       return True
 
@@ -82,7 +82,7 @@ class FollowCloseTargetCurriculum(TowerfallObjective):
     #   self.gv = GridView(5)
     self.gv.set_scenario(state_scenario)
     self.gv.update(entities, player)
-    self.start_ends: list[Tuple[Vec2, Vec2]] = []
+    self.start_ends: List[Tuple[Vec2, Vec2]] = []
     hsize = player.s / 2
     for start in self._pick_all_starts():
       if self.gv.is_region_collision(start - hsize, start + hsize):
@@ -110,10 +110,10 @@ class FollowCloseTargetCurriculum(TowerfallObjective):
     self.initialized = True
     return False
 
-  def extend_obs_space(self, obs_space_dict: dict[str, Space]):
+  def extend_obs_space(self, obs_space_dict: Dict[str, Space]):
     self.objective.extend_obs_space(obs_space_dict)
 
-  def get_reset_entities(self) -> Optional[list[dict]]:
+  def get_reset_entities(self) -> Optional[List[Dict[str, Any]]]:
     if not self.initialized:
       return None
     self.objective.env = self.env
@@ -125,11 +125,11 @@ class FollowCloseTargetCurriculum(TowerfallObjective):
     self.start, self.end = self.start_ends[self.task_idx]
     return [dict(type='archer', pos=self.start.dict())]
 
-  def post_reset(self, state_scenario: dict, player: Optional[Entity], entities: list[Entity], obs_dict: dict):
+  def post_reset(self, state_scenario: Dict[str, Any], player: Optional[Entity], entities: List[Entity], obs_dict: Dict[str, Any]):
     target = (self.end.x, self.end.y)
     self.objective.post_reset(state_scenario, player, entities, obs_dict, target)
 
-  def post_step(self, player: Optional[Entity], entities: list[Entity], command: str, obs_dict: dict):
+  def post_step(self, player: Optional[Entity], entities: List[Entity], command: str, obs_dict: Dict[str, Any]):
     self.objective.post_step(player, entities, command, obs_dict)
     self.rew = self.objective.rew
     self.done = self.objective.done

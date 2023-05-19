@@ -1,35 +1,20 @@
 import sys
-sys.path.insert(0, 'C:/Program Files (x86)/Steam/steamapps/common/TowerFall/aimod')
 
-import random
-from entity_gym.env import GlobalCategoricalAction, GlobalCategoricalActionSpace
-from entity_envs.entity_env import TowerfallEntityEnvImpl
-from envs.connection_provider import TowerfallProcessProvider
-
+sys.path.insert(0, '.')
 
 import logging
+import random
 
-from typing import Any
+from entity_gym.env import (GlobalCategoricalAction,
+                            GlobalCategoricalActionSpace)
 
-class NoLevelFormatter(logging.Formatter):
-  def format(self, record):
-    return record.getMessage()
+from common import logging_options
+from entity_envs.entity_env import TowerfallEntityEnvImpl
 
-logging.basicConfig(level=logging.INFO)
-logging.getLogger().handlers[0].setFormatter(NoLevelFormatter())
+logging_options.set_default()
 
 def create_env() -> TowerfallEntityEnvImpl:
-  towerfall_provider = TowerfallProcessProvider('test-entity-env')
-  towerfall = towerfall_provider.get_process(
-    fastrun=True,
-    config=dict(
-      mode='sandbox',
-      level='2',
-      fps=90,
-    agents=[dict(type='remote', team='blue', archer='green')]
-  ), verbose=1)
-  env = TowerfallEntityEnvImpl(
-    verbose=0)
+  env = TowerfallEntityEnvImpl(verbose=0)
   return env
 
 

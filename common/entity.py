@@ -10,7 +10,7 @@ from numpy.typing import NDArray
 
 
 class Entity:
-  def __init__(self, e: dict):
+  def __init__(self, e: Dict[str, Any]):
     self.p: Vec2 = vec2_from_dict(e['pos'])
     self.v: Vec2 = vec2_from_dict(e['vel'])
     self.s: Vec2 = vec2_from_dict(e['size'])
@@ -108,7 +108,7 @@ class Vec2:
     self.y /= f
 
 
-def vec2_from_dict(p: dict) -> Vec2:
+def vec2_from_dict(p: Dict[str, Any]) -> Vec2:
   try:
     return Vec2(p['x'], p['y'])
   except KeyError:
@@ -116,7 +116,7 @@ def vec2_from_dict(p: dict) -> Vec2:
     raise
 
 
-def to_entities(entities: List[dict]) -> List[Entity]:
+def to_entities(entities: List[Dict[str, Any]]) -> List[Entity]:
   result = []
   for e in entities:
     result.append(Entity(e))

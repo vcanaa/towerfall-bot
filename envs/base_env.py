@@ -1,17 +1,14 @@
-import json
 import logging
-
 from abc import ABC, abstractmethod
-
-from common import Connection, Entity, to_entities
-
-from .actions import TowerfallActions
-from .connection_provider import TowerfallProcess
-
-from typing import List, Optional, Tuple, Any
-from numpy.typing import NDArray
+from typing import Any, List, Optional, Tuple
 
 from gym import Env
+from numpy.typing import NDArray
+
+from common import Entity, to_entities
+from towerfall.towerfall import Towerfall
+
+from .actions import TowerfallActions
 
 
 class TowerfallEnv(Env, ABC):
@@ -23,14 +20,14 @@ class TowerfallEnv(Env, ABC):
   param actions: The actions that the agent can take. If None, the default actions are used.
   '''
   def __init__(self,
-      towerfall: TowerfallProcess,
+      towerfall: Towerfall,
       actions: Optional[TowerfallActions] = None,
       record_path: Optional[str] = None,
       verbose: int = 0):
     logging.info('Initializing TowerfallEnv')
     self.towerfall = towerfall
     self.verbose = verbose
-    self.connection = self.towerfall.join(timeout=5, verbose=self.verbose)
+    self.connection = self.towerfall.join(timeout=5)
     self.connection.record_path = record_path
     if actions:
       self.actions = actions
@@ -58,7 +55,7 @@ class TowerfallEnv(Env, ABC):
     Returns:
       True if hard reset, False if soft reset.
     '''
-    self.towerfall.send_reset(verbose=self.verbose)
+    self.towerfall.send_reset()
 
   @abstractmethod
   def _post_reset(self) -> Tuple[NDArray, dict]:
@@ -122,7 +119,7 @@ class TowerfallEnv(Env, ABC):
     '''
     command = self.actions._actions_to_command(actions)
 
-    resp: dict[str, Any] = dict(
+    resp: Dict[str, Any] = dict(
       type='commands',
       command=command,
       id=self.state_update['id']

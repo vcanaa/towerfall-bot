@@ -6,7 +6,7 @@ from gym import spaces, Space
 
 from common import Entity, GridView, JUMP, DASH, SHOOT
 
-from typing import Sequence, Optional, Tuple, Union
+from typing import Any, Dict, List, Mapping, Sequence, Optional, Tuple, Union
 
 
 class TowerfallObservation(ABC):
@@ -14,17 +14,17 @@ class TowerfallObservation(ABC):
   Base class for observations.
   '''
   @abstractmethod
-  def extend_obs_space(self, obs_space_dict: dict[str, Space]):
+  def extend_obs_space(self, obs_space_dict: Mapping[str, Space]):
     '''Adds the new definitions to observations to obs_space.'''
     raise NotImplementedError()
 
   @abstractmethod
-  def post_reset(self, state_scenario: dict, player: Optional[Entity], entities: list[Entity], obs_dict: dict):
+  def post_reset(self, state_scenario: Mapping[str, Any], player: Optional[Entity], entities: List[Entity], obs_dict: Dict[str, Any]):
     '''Hook for a gym reset call. Adds observations to obs_dict.'''
     raise NotImplementedError
 
   @abstractmethod
-  def post_step(self, player: Optional[Entity], entities: list[Entity], command: str, obs_dict: dict):
+  def post_step(self, player: Optional[Entity], entities: List[Entity], command: str, obs_dict: Mapping[str, Any]):
     '''Hook for a gym step call. Adds observations to obs_dict.'''
     raise NotImplementedError
 
@@ -34,7 +34,7 @@ class PlayerObservation(TowerfallObservation):
   def __init__(self, exclude: Optional[Sequence[str]] = None):
     self.exclude = exclude
 
-  def extend_obs_space(self, obs_space_dict: dict[str, Space]):
+  def extend_obs_space(self, obs_space_dict: Dict[str, Space]):
     def try_add_obs(key, value):
       if self.exclude and key in self.exclude:
         return
@@ -53,13 +53,13 @@ class PlayerObservation(TowerfallObservation):
     try_add_obs('onWall', spaces.Discrete(2))
     try_add_obs('vel', spaces.Box(low=-2, high=2, shape=(2,), dtype=np.float32))
 
-  def post_reset(self, state_scenario: dict, player: Optional[Entity], entities: list[Entity], obs_dict: dict):
+  def post_reset(self, state_scenario: Mapping[str, Any], player: Optional[Entity], entities: List[Entity], obs_dict: Dict[str, Any]):
     self._extend_obs(player, '', obs_dict)
 
-  def post_step(self, player: Optional[Entity], entities: list[Entity], command: str, obs_dict):
+  def post_step(self, player: Optional[Entity], entities: List[Entity], command: str, obs_dict: Dict[str, Any]):
     self._extend_obs(player, command, obs_dict)
 
-  def _extend_obs(self, player: Optional[Entity], command: str, obs_dict: dict):
+  def _extend_obs(self, player: Optional[Entity], command: str, obs_dict: Dict[str, Any]):
     def try_add_obs(key, value):
       if self.exclude and key in self.exclude:
         return
@@ -100,25 +100,25 @@ class GridObservation(TowerfallObservation):
     self.frame = 0
     self.add_grid = add_grid
 
-  def extend_obs_space(self, obs_space_dict: dict[str, Space]):
+  def extend_obs_space(self, obs_space_dict: Dict[str, Space]):
     if self.add_grid:
       if 'grid' in obs_space_dict:
         raise Exception('Observation space already has \'grid\'')
       obs_space_dict['grid'] = self.obs_space
 
-  def post_reset(self, state_scenario: dict, player: Optional[Entity], entities: list[Entity], obs_dict: dict):
+  def post_reset(self, state_scenario: Mapping[str, Any], player: Optional[Entity], entities: List[Entity], obs_dict: Dict[str, Any]):
     self.frame = 0
     self.gv.set_scenario(state_scenario)
     self._update_grid(player, entities)
 
     self._extend_obs(obs_dict)
 
-  def post_step(self, player: Optional[Entity], entities: list[Entity], command: str, obs_dict: dict):
+  def post_step(self, player: Optional[Entity], entities: List[Entity], command: str, obs_dict: Dict[str, Any]):
     self._update_grid(player, entities)
     self._extend_obs(obs_dict)
     self.frame += 1
 
-  def _update_grid(self, player: Optional[Entity], entities: list[Entity]):
+  def _update_grid(self, player: Optional[Entity], entities: List[Entity]):
     if player:
       self.gv.update(entities, player)
     else:
@@ -126,6 +126,6 @@ class GridObservation(TowerfallObservation):
       self.gv.update(entities, self.prev_player)
     self.prev_player = player
 
-  def _extend_obs(self, obs_dict: dict):
+  def _extend_obs(self, obs_dict: Dict[str, Any]):
     if self.add_grid:
       obs_dict['grid'] = self.gv.view(self.sight)

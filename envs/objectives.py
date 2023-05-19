@@ -11,7 +11,7 @@ from common import Entity, GridView, WIDTH, HEIGHT, HW, HH, Vec2, grid_pos
 from .base_env import TowerfallEnv
 from .observations import TowerfallObservation
 
-from typing import Optional, Tuple
+from typing import Any, Dict, List, Mapping, Optional, Tuple
 from numpy.typing import NDArray
 
 
@@ -21,10 +21,10 @@ class TowerfallObjective(TowerfallObservation):
     self.rew: float
     self.env: TowerfallEnv
 
-  def is_reset_valid(self, state_scenario: dict, player: Optional[Entity], entities: list[Entity]) -> bool:
+  def is_reset_valid(self, state_scenario: Mapping[str, Any], player: Optional[Entity], entities: List[Entity]) -> bool:
     return True
 
-  def get_reset_entities(self) -> list[dict]:
+  def get_reset_entities(self) -> list[Dict[str, Any]]:
     '''Specifies how the environment needs to be reset.'''
     return []
 
@@ -51,12 +51,12 @@ class FollowTargetObjective(TowerfallObjective):
     self.rew_dc = rew_dc
     self.obs_space = spaces.Box(low=-2, high = 2, shape=(2,), dtype=np.float32)
 
-  def extend_obs_space(self, obs_space_dict: dict[str, Space]):
+  def extend_obs_space(self, obs_space_dict: Dict[str, Space]):
     if 'target' in obs_space_dict:
       raise Exception('Observation space already has \'target\'')
     obs_space_dict['target'] = self.obs_space
 
-  def post_reset(self, state_scenario: dict, player: Optional[Entity], entities: list[Entity], obs_dict: dict, target: Optional[Tuple[float, float]] = None):
+  def post_reset(self, state_scenario: Mapping[str, Any], player: Optional[Entity], entities: List[Entity], obs_dict: Dict[str, Any], target: Optional[Tuple[float, float]] = None):
     if not player:
       obs_dict['target'] = self.obs_target
       return
@@ -67,7 +67,7 @@ class FollowTargetObjective(TowerfallObjective):
       self._set_random_target(player)
     obs_dict['target'] = self.obs_target
 
-  def post_step(self, player: Optional[Entity], entities: list[Entity], command: str, obs_dict: dict):
+  def post_step(self, player: Optional[Entity], entities: List[Entity], command: str, obs_dict: Dict[str, Any]):
     self._update_reward(player)
     self.episode_len += 1
     if player:

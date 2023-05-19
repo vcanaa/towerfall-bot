@@ -1,12 +1,12 @@
 import json
 
-from typing import List
+from typing import Any, Dict, List
 
 class GameReplay:
   def __init__(self):
-    self.state_init: dict
-    self.state_scenario: dict
-    self.state_update: List[dict] = []
+    self.state_init: Dict[str, Any]
+    self.state_scenario: Dict[str, Any]
+    self.state_update: List[Dict[str, Any]] = []
     self.actions: List[str] = []
 
   def handle_init(self, state):

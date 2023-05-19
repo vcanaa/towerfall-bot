@@ -74,7 +74,7 @@ class BotRecorder(Bot):
       self.handle_update(game_state)
 
 
-  def handle_init(self, state: dict):
+  def handle_init(self, state: Dict[str, Any]):
     logging.info("handle_init")
     if hasattr(self, 'replay'):
       dir_path = Path(os.path.join('replays', REPLAY_NAME))
@@ -88,7 +88,7 @@ class BotRecorder(Bot):
     self.connection.write('.')
 
 
-  def handle_scenario(self, state: dict):
+  def handle_scenario(self, state: Dict[str, Any]):
     logging.info("handle_scenario")
     self.replay.handle_scenario(state)
     self.stateScenario = state

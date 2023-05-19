@@ -1,16 +1,14 @@
-import logging
 import random
 
 from entity_gym.env import Observation, GlobalCategoricalActionMask
 
-from typing import Any, Optional
+from typing import Any, Dict, List, Optional
 
 import numpy as np
 from common.constants import HH, HW
 from common.entity import Entity, Vec2
 from entity_envs.entity_base_env import TowerfallEntityEnv
 
-from envs.connection_provider import TowerfallProcess, TowerfallProcessProvider
 
 
 class TowerfallEntityEnvImpl(TowerfallEntityEnv):
@@ -35,7 +33,7 @@ class TowerfallEntityEnvImpl(TowerfallEntityEnv):
 
   def _send_reset(self):
     reset_entities = self._get_reset_entities()
-    self.towerfall.send_reset(reset_entities, verbose=self.verbose)
+    self.towerfall.send_reset(reset_entities)
 
   def _post_reset(self) -> Observation:
     assert self.me, 'No player found after reset'
@@ -55,9 +53,9 @@ class TowerfallEntityEnvImpl(TowerfallEntityEnv):
     arrows = list(e for e in self.entities if e['type'] == 'arrow')
     return self._get_obs(targets, arrows)
 
-  def _get_reset_entities(self) -> Optional[list[dict]]:
+  def _get_reset_entities(self) -> Optional[List[Dict[str, Any]]]:
     p = Vec2(160, 110)
-    entities: list[dict[str, Any]] = [dict(type='archer', pos=p.dict())]
+    entities: List[Dict[str, Any]] = [dict(type='archer', pos=p.dict())]
     for i in range(self.enemy_count):
       sign = random.randint(0, 1)*2 - 1
       d = random.uniform(self.min_distance, self.max_distance) * sign
@@ -68,7 +66,7 @@ class TowerfallEntityEnvImpl(TowerfallEntityEnv):
       entities.append(enemy)
     return entities
 
-  def _update_reward(self, enemies: list[Entity]):
+  def _update_reward(self, enemies: List[Entity]):
     '''
     Updates the reward and checks if the episode is done.
     '''
@@ -102,7 +100,7 @@ class TowerfallEntityEnvImpl(TowerfallEntityEnv):
   def limit(self, x: float, a: float, b: float) -> float:
     return x+b-a if x < a else x-b+a if x > b else x
 
-  def _get_obs(self, enemies: list[Entity], arrows: list[Entity]) -> Observation:
+  def _get_obs(self, enemies: List[Entity], arrows: List[Entity]) -> Observation:
     if not self.me:
       return Observation(
         done=self.done,
